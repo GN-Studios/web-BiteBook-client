@@ -4,11 +4,10 @@ import { BrandBar } from "./BrandBar";
 
 const SIDEBAR_WIDTH = 88;
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
+export const AppLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <Box sx={{ minHeight: "100vh", display: "flex", bgcolor: "background.default" }}>
       <Sidebar width={SIDEBAR_WIDTH} />
-
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <BrandBar />
         <Divider sx={{ opacity: 0.5 }} />
@@ -18,4 +17,4 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </Box>
     </Box>
   );
-}
+};

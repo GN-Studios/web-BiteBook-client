@@ -1,7 +1,7 @@
 import { Box, Typography } from "@mui/material";
-import RestaurantRoundedIcon from "@mui/icons-material/RestaurantRounded";
+import { RestaurantRounded } from "@mui/icons-material";
 
-export function BrandBar() {
+export const BrandBar = () => {
   return (
     <Box
       sx={{
@@ -25,12 +25,11 @@ export function BrandBar() {
           boxShadow: "0 10px 25px rgba(242,140,40,0.25)",
         }}
       >
-        <RestaurantRoundedIcon fontSize="small" />
+        <RestaurantRounded fontSize="small" />
       </Box>
-
       <Typography variant="h6" sx={{ fontWeight: 900 }}>
         BiteBook
       </Typography>
     </Box>
   );
-}
+};

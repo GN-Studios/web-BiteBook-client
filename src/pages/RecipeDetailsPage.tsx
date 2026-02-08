@@ -2,13 +2,14 @@ import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { useMemo } from "react";
 import { useAppStore } from "../app/providers";
 import { RecipeDetailsView } from "../components";
+import type { Recipe } from "../types";
 
-export function RecipeDetailsPage() {
+export const RecipeDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const { state, dispatch } = useAppStore();
   const navigate = useNavigate();
 
-  const recipe = useMemo(() => state.recipes.find((r) => r.id === id), [state.recipes, id]);
+  const recipe = useMemo(() => state.recipes.find((recipe: Recipe) => recipe.id === id), [state.recipes, id]);
   if (!recipe) return <Navigate to="/explore" replace />;
 
   const liked = state.likedIds.has(recipe.id);
@@ -24,4 +25,4 @@ export function RecipeDetailsPage() {
       onBack={() => navigate(-1)}
     />
   );
-}
+};

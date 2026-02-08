@@ -1,7 +1,7 @@
 import { Box, Paper, Typography } from "@mui/material";
 import { FavoriteBorderRounded } from "@mui/icons-material";
 
-export function EmptyState({ title, subtitle }: { title: string; subtitle: string }) {
+export const EmptyState = ({ title, subtitle }: { title: string; subtitle: string }) => {
   return (
     <Paper
       elevation={0}
@@ -35,4 +35,4 @@ export function EmptyState({ title, subtitle }: { title: string; subtitle: strin
       </Typography>
     </Paper>
   );
-}
+};

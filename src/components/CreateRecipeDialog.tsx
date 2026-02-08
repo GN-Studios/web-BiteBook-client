@@ -27,18 +27,18 @@ type Props = {
 const DEFAULT_RECIPE_IMAGE =
   "https://images.unsplash.com/photo-1495521821757-a1efb6729352?auto=format&fit=crop&w=1600&q=80";
 
-function makeId() {
+const makeId = () => {
   return crypto.randomUUID();
-}
+};
 
-function clampInt(value: number, min: number) {
+const clampInt = (value: number, min: number) => {
   if (Number.isNaN(value)) return min;
   return Math.max(min, Math.floor(value));
-}
+};
 
 const emptyIngredient = (): Ingredient => ({ amount: "", name: "" });
 
-function toForm(recipe?: Recipe): NewRecipeInput {
+const toForm = (recipe?: Recipe): NewRecipeInput => {
   return {
     title: recipe?.title ?? "",
     description: recipe?.description ?? "",
@@ -51,9 +51,9 @@ function toForm(recipe?: Recipe): NewRecipeInput {
     ingredients: recipe?.ingredients?.length ? recipe.ingredients : [emptyIngredient()],
     steps: recipe?.steps?.length ? recipe.steps : [""],
   };
-}
+};
 
-export function CreateRecipeDialog({ open, mode, initialRecipe, onClose, onCreate, onUpdate }: Props) {
+export const CreateRecipeDialog = ({ open, mode, initialRecipe, onClose, onCreate, onUpdate }: Props) => {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [form, setForm] = useState<NewRecipeInput>(() => toForm(initialRecipe));
@@ -74,11 +74,11 @@ export function CreateRecipeDialog({ open, mode, initialRecipe, onClose, onCreat
     return hasTitle && hasDesc && hasAtLeastOneIngredient && hasAtLeastOneStep;
   }, [form]);
 
-  function handlePickImage() {
+  const handlePickImage = () => {
     inputRef.current?.click();
-  }
+  };
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -88,50 +88,50 @@ export function CreateRecipeDialog({ open, mode, initialRecipe, onClose, onCreat
       setForm((prev) => ({ ...prev, imageUrl: dataUrl }));
     };
     reader.readAsDataURL(file);
-  }
+  };
 
-  function updateIngredient(idx: number, patch: Partial<Ingredient>) {
+  const updateIngredient = (idx: number, patch: Partial<Ingredient>) => {
     setForm((prev) => {
       const next = [...prev.ingredients];
       next[idx] = { ...next[idx], ...patch };
       return { ...prev, ingredients: next };
     });
-  }
+  };
 
-  function addIngredient() {
+  const addIngredient = () => {
     setForm((prev) => ({
       ...prev,
       ingredients: [...prev.ingredients, emptyIngredient()],
     }));
-  }
+  };
 
-  function removeIngredient(idx: number) {
+  const removeIngredient = (idx: number) => {
     setForm((prev) => {
       const next = prev.ingredients.filter((_, i) => i !== idx);
       return { ...prev, ingredients: next.length ? next : [emptyIngredient()] };
     });
-  }
+  };
 
-  function updateStep(idx: number, value: string) {
+  const updateStep = (idx: number, value: string) => {
     setForm((prev) => {
       const next = [...prev.steps];
       next[idx] = value;
       return { ...prev, steps: next };
     });
-  }
+  };
 
-  function addStep() {
+  const addStep = () => {
     setForm((prev) => ({ ...prev, steps: [...prev.steps, ""] }));
-  }
+  };
 
-  function removeStep(idx: number) {
+  const removeStep = (idx: number) => {
     setForm((prev) => {
       const next = prev.steps.filter((_, i) => i !== idx);
       return { ...prev, steps: next.length ? next : [""] };
     });
-  }
+  };
 
-  async function handleSubmit() {
+  const handleSubmit = async () => {
     if (!canSubmit) return;
     setBusy(true);
 
@@ -180,7 +180,7 @@ export function CreateRecipeDialog({ open, mode, initialRecipe, onClose, onCreat
 
     setBusy(false);
     onClose();
-  }
+  };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -380,4 +380,4 @@ export function CreateRecipeDialog({ open, mode, initialRecipe, onClose, onCreat
       </DialogContent>
     </Dialog>
   );
-}
+};

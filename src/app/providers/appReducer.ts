@@ -1,6 +1,6 @@
 import type { AppAction, AppState } from "./storeTypes";
 
-export function appReducer(state: AppState, action: AppAction): AppState {
+export const appReducer = (state: AppState, action: AppAction): AppState => {
   switch (action.type) {
     case "TOGGLE_LIKE": {
       const likedIds = new Set(state.likedIds);
@@ -50,4 +50,4 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return state;
     }
   }
-}
+};

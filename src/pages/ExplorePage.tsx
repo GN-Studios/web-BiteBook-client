@@ -1,22 +1,21 @@
 import { Box, Fab, Grid, Stack, Typography } from "@mui/material";
-import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import { AddRounded } from "@mui/icons-material";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import { RecipeCard, CreateRecipeDialog } from "../components";
 import { useAppStore } from "../app/providers";
 import type { Recipe } from "../types";
 
-export function ExplorePage() {
+export const ExplorePage = () => {
   const { state, dispatch } = useAppStore();
   const navigate = useNavigate();
   const [openCreate, setOpenCreate] = useState(false);
 
   const recipes = useMemo(() => state.recipes, [state.recipes]);
 
-  function onCreate(recipe: Recipe) {
+  const onCreate = (recipe: Recipe) => {
     dispatch({ type: "ADD_RECIPE", recipe, addToMyRecipes: true });
-  }
+  };
 
   return (
     <Box sx={{ position: "relative" }}>
@@ -24,15 +23,15 @@ export function ExplorePage() {
         <Typography variant="h4">Explore Recipes</Typography>
 
         <Grid container spacing={2.25}>
-          {recipes.map((r) => {
-            const liked = state.likedIds.has(r.id);
+          {recipes.map((recipe: Recipe) => {
+            const liked = state.likedIds.has(recipe.id);
             return (
-              <Grid key={r.id} item xs={12} sm={6} lg={6} xl={4}>
+              <Grid key={recipe.id} item xs={12} sm={6} lg={6} xl={4}>
                 <RecipeCard
-                  recipe={r}
+                  recipe={recipe}
                   liked={liked}
-                  onToggleLike={() => dispatch({ type: "TOGGLE_LIKE", recipeId: r.id })}
-                  onOpen={() => navigate(`/recipe/${r.id}`)}
+                  onToggleLike={() => dispatch({ type: "TOGGLE_LIKE", recipeId: recipe.id })}
+                  onOpen={() => navigate(`/recipe/${recipe.id}`)}
                 />
               </Grid>
             );
@@ -51,9 +50,9 @@ export function ExplorePage() {
           boxShadow: "0 18px 40px rgba(242,140,40,0.30)",
         }}
       >
-        <AddRoundedIcon />
+        <AddRounded />
       </Fab>
       <CreateRecipeDialog open={openCreate} onClose={() => setOpenCreate(false)} onCreate={onCreate} mode="create" />
     </Box>
   );
-}
+};

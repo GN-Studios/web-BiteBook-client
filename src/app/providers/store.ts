@@ -8,8 +8,8 @@ export type AppStoreValue = {
 
 export const AppStoreContext = createContext<AppStoreValue | null>(null);
 
-export function useAppStore(): AppStoreValue {
+export const useAppStore = (): AppStoreValue => {
   const ctx = useContext(AppStoreContext);
   if (!ctx) throw new Error("useAppStore must be used within AppStoreProvider");
   return ctx;
-}
+};

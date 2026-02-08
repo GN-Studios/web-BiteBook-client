@@ -1,8 +1,8 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { AppLayout } from "../layout/AppLayout";
+import { AppLayout } from "../layout";
 import { ExplorePage, DailyPage, ProfilePage, RecipeDetailsPage } from "../pages";
 
-export default function App() {
+export const App = () => {
   return (
     <AppLayout>
       <Routes>
@@ -15,4 +15,4 @@ export default function App() {
       </Routes>
     </AppLayout>
   );
-}
+};

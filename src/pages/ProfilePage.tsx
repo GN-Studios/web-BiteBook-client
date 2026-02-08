@@ -7,7 +7,7 @@ import { useAppStore } from "../app/providers";
 import { RecipeCard, EmptyState, CreateRecipeDialog } from "../components";
 import type { Recipe } from "../types";
 
-export function ProfilePage() {
+export const ProfilePage = () => {
   const { state, dispatch } = useAppStore();
   const [tab, setTab] = useState<"my" | "liked">("my");
   const [editOpen, setEditOpen] = useState(false);
@@ -15,28 +15,28 @@ export function ProfilePage() {
   const navigate = useNavigate();
 
   const myRecipes = useMemo(() => {
-    return state.recipes.filter((r) => state.myRecipeIds.has(r.id));
+    return state.recipes.filter((recipe: Recipe) => state.myRecipeIds.has(recipe.id));
   }, [state.recipes, state.myRecipeIds]);
 
   const likedRecipes = useMemo(() => {
-    return state.recipes.filter((r) => state.likedIds.has(r.id));
+    return state.recipes.filter((recipe: Recipe) => state.likedIds.has(recipe.id));
   }, [state.recipes, state.likedIds]);
 
   const showEmptyLiked = tab === "liked" && likedRecipes.length === 0;
 
-  function openEdit(r: Recipe) {
-    setEditing(r);
+  const openEdit = (recipe: Recipe) => {
+    setEditing(recipe);
     setEditOpen(true);
-  }
+  };
 
-  function closeEdit() {
+  const closeEdit = () => {
     setEditOpen(false);
     setEditing(null);
-  }
+  };
 
-  function deleteRecipe(id: string) {
+  const deleteRecipe = (id: string) => {
     dispatch({ type: "DELETE_RECIPE", recipeId: id });
-  }
+  };
 
   return (
     <Box>
@@ -84,17 +84,17 @@ export function ProfilePage() {
         <EmptyState title="No liked recipes" subtitle="Like recipes to save them here" />
       ) : (
         <Stack spacing={2.25}>
-          {(tab === "my" ? myRecipes : likedRecipes).map((r) => {
+          {(tab === "my" ? myRecipes : likedRecipes).map((recipe: Recipe) => {
             return (
-              <Box key={r.id}>
+              <Box key={recipe.id}>
                 <RecipeCard
-                  recipe={r}
-                  liked={state.likedIds.has(r.id)}
-                  onToggleLike={() => dispatch({ type: "TOGGLE_LIKE", recipeId: r.id })}
-                  onOpen={() => navigate(`/recipe/${r.id}`)}
+                  recipe={recipe}
+                  liked={state.likedIds.has(recipe.id)}
+                  onToggleLike={() => dispatch({ type: "TOGGLE_LIKE", recipeId: recipe.id })}
+                  onOpen={() => navigate(`/recipe/${recipe.id}`)}
                   showOwnerActions
-                  onEdit={() => openEdit(r)}
-                  onDelete={() => deleteRecipe(r.id)}
+                  onEdit={() => openEdit(recipe)}
+                  onDelete={() => deleteRecipe(recipe.id)}
                 />
                 <CreateRecipeDialog
                   open={editOpen}
@@ -110,4 +110,4 @@ export function ProfilePage() {
       )}
     </Box>
   );
-}
+};

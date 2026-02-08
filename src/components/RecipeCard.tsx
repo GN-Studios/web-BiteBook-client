@@ -1,4 +1,3 @@
-import React from "react";
 import { Box, Card, CardActionArea, CardContent, CardMedia, IconButton, Paper, Stack, Typography } from "@mui/material";
 import {
   FavoriteBorderRounded,
@@ -9,8 +8,7 @@ import {
   DeleteOutlineRounded,
   ChatBubbleOutlineRounded,
 } from "@mui/icons-material";
-
-import type { Recipe } from "../types/recipe";
+import type { Recipe } from "../types";
 
 const DEFAULT_RECIPE_IMAGE =
   "https://images.unsplash.com/photo-1495521821757-a1efb6729352?auto=format&fit=crop&w=1200&q=80";
@@ -21,13 +19,20 @@ type Props = {
   onToggleLike: () => void;
   onOpen: () => void;
 
-  // only for "My Recipes"
   showOwnerActions?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
 };
 
-export function RecipeCard({ recipe, liked, onToggleLike, onOpen, showOwnerActions = false, onEdit, onDelete }: Props) {
+export const RecipeCard = ({
+  recipe,
+  liked,
+  onToggleLike,
+  onOpen,
+  showOwnerActions = false,
+  onEdit,
+  onDelete,
+}: Props) => {
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
   const displayedLikes = recipe.likes + (liked ? 1 : 0);
   const commentsCount = recipe.commentsCount ?? 0;
@@ -61,7 +66,6 @@ export function RecipeCard({ recipe, liked, onToggleLike, onOpen, showOwnerActio
             }}
           />
         </CardActionArea>
-
         {showOwnerActions ? (
           <Stack direction="row" spacing={1} sx={{ position: "absolute", top: 12, left: 12 }}>
             <Paper elevation={0} sx={{ borderRadius: 999 }}>
@@ -76,7 +80,6 @@ export function RecipeCard({ recipe, liked, onToggleLike, onOpen, showOwnerActio
             </Paper>
           </Stack>
         ) : null}
-
         <Paper
           elevation={0}
           sx={{
@@ -91,16 +94,13 @@ export function RecipeCard({ recipe, liked, onToggleLike, onOpen, showOwnerActio
           </IconButton>
         </Paper>
       </Box>
-
       <CardContent sx={{ p: 2 }}>
         <Typography variant="h6" sx={{ fontWeight: 900 }}>
           {recipe.title}
         </Typography>
-
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
           {recipe.description}
         </Typography>
-
         <Stack direction="row" spacing={2} sx={{ mt: 1.5 }} alignItems="center">
           <Stack direction="row" spacing={0.8} alignItems="center">
             <AccessTimeRounded fontSize="small" color="action" />
@@ -108,21 +108,19 @@ export function RecipeCard({ recipe, liked, onToggleLike, onOpen, showOwnerActio
               {totalMinutes} min
             </Typography>
           </Stack>
-
           <Stack direction="row" spacing={0.8} alignItems="center">
             <Groups2Rounded fontSize="small" color="action" />
             <Typography variant="body2" color="text.secondary">
               {recipe.servings}
             </Typography>
           </Stack>
-
           <Box sx={{ flex: 1 }} />
           <Stack direction="row" spacing={1.6} alignItems="center">
             <Stack direction="row" spacing={0.6} alignItems="center">
               <FavoriteRounded
                 sx={{
                   fontSize: 18,
-                  color: liked ? "primary.main" : "success.main", // closer “accented” like the screenshot
+                  color: liked ? "primary.main" : "success.main",
                 }}
               />
               <Typography
@@ -135,7 +133,6 @@ export function RecipeCard({ recipe, liked, onToggleLike, onOpen, showOwnerActio
                 {displayedLikes}
               </Typography>
             </Stack>
-
             <Stack direction="row" spacing={0.6} alignItems="center">
               <ChatBubbleOutlineRounded sx={{ fontSize: 18, opacity: 0.85 }} />
               <Typography variant="body2" sx={{ fontWeight: 800 }}>
@@ -147,4 +144,4 @@ export function RecipeCard({ recipe, liked, onToggleLike, onOpen, showOwnerActio
       </CardContent>
     </Card>
   );
-}
+};

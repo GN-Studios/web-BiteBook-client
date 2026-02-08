@@ -1,18 +1,16 @@
 import { Box, IconButton, Tooltip } from "@mui/material";
-import ExploreOutlinedIcon from "@mui/icons-material/ExploreOutlined";
-import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
-import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
+import { ExploreOutlined, AutoAwesomeOutlined, PersonOutlineRounded } from "@mui/icons-material";
 import { NavLink, useLocation } from "react-router-dom";
 
 type Props = { width: number };
 
 const navItems = [
-  { label: "Explore", to: "/explore", icon: <ExploreOutlinedIcon /> },
-  { label: "Daily", to: "/daily", icon: <AutoAwesomeOutlinedIcon /> },
-  { label: "My", to: "/profile", icon: <PersonOutlineRoundedIcon /> },
+  { label: "Explore", to: "/explore", icon: <ExploreOutlined /> },
+  { label: "Daily", to: "/daily", icon: <AutoAwesomeOutlined /> },
+  { label: "My", to: "/profile", icon: <PersonOutlineRounded /> },
 ];
 
-export function Sidebar({ width }: Props) {
+export const Sidebar = ({ width }: Props) => {
   const location = useLocation();
 
   return (
@@ -55,4 +53,4 @@ export function Sidebar({ width }: Props) {
       })}
     </Box>
   );
-}
+};

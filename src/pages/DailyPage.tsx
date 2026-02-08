@@ -1,12 +1,13 @@
 import { useMemo } from "react";
-import { useAppStore } from "../app/providers/store";
-import { RecipeDetailsView } from "../components/RecipeDetailsView";
+import { useAppStore } from "../app/providers";
+import { RecipeDetailsView } from "../components";
+import type { Recipe } from "../types";
 
-export function DailyPage() {
+export const DailyPage = () => {
   const { state, dispatch } = useAppStore();
 
   const recipe = useMemo(() => {
-    return state.recipes.find((r) => r.id === state.featuredRecipeId) ?? state.recipes[0];
+    return state.recipes.find((recipe: Recipe) => recipe.id === state.featuredRecipeId) ?? state.recipes[0];
   }, [state.recipes, state.featuredRecipeId]);
 
   const liked = state.likedIds.has(recipe.id);
@@ -21,4 +22,4 @@ export function DailyPage() {
       onToggleLike={() => dispatch({ type: "TOGGLE_LIKE", recipeId: recipe.id })}
     />
   );
-}
+};
