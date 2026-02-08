@@ -53,8 +53,7 @@ export function ExplorePage() {
       >
         <AddRoundedIcon />
       </Fab>
-
-      <CreateRecipeDialog open={openCreate} onClose={() => setOpenCreate(false)} onCreate={onCreate} />
+      <CreateRecipeDialog open={openCreate} onClose={() => setOpenCreate(false)} onCreate={onCreate} mode="create" />
     </Box>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -11,18 +11,21 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import UploadRoundedIcon from "@mui/icons-material/UploadRounded";
-import AddRoundedIcon from "@mui/icons-material/AddRounded";
-import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
-
-import type { Ingredient, NewRecipeInput, Recipe } from "../types/recipe";
+import { CloseRounded, UploadRounded, AddRounded, DeleteOutlineRounded } from "@mui/icons-material";
+import type { Ingredient, NewRecipeInput, Recipe } from "../types";
 
 type Props = {
   open: boolean;
+  mode: "create" | "edit";
+  initialRecipe?: Recipe; // required for edit
   onClose: () => void;
-  onCreate: (recipe: Recipe) => void;
+
+  onCreate?: (recipe: Recipe) => void;
+  onUpdate?: (recipe: Recipe) => void;
 };
+
+const DEFAULT_RECIPE_IMAGE =
+  "https://images.unsplash.com/photo-1495521821757-a1efb6729352?auto=format&fit=crop&w=1600&q=80";
 
 function makeId() {
   return crypto.randomUUID();
@@ -35,49 +38,41 @@ function clampInt(value: number, min: number) {
 
 const emptyIngredient = (): Ingredient => ({ amount: "", name: "" });
 
-export function CreateRecipeDialog({ open, onClose, onCreate }: Props) {
+function toForm(recipe?: Recipe): NewRecipeInput {
+  return {
+    title: recipe?.title ?? "",
+    description: recipe?.description ?? "",
+    imageUrl: recipe?.imageUrl,
+
+    prepMinutes: recipe?.prepMinutes ?? 0,
+    cookMinutes: recipe?.cookMinutes ?? 0,
+    servings: recipe?.servings ?? 4,
+
+    ingredients: recipe?.ingredients?.length ? recipe.ingredients : [emptyIngredient()],
+    steps: recipe?.steps?.length ? recipe.steps : [""],
+  };
+}
+
+export function CreateRecipeDialog({ open, mode, initialRecipe, onClose, onCreate, onUpdate }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const [form, setForm] = useState<NewRecipeInput>({
-    title: "",
-    description: "",
-    imageUrl: undefined,
-
-    prepMinutes: 0,
-    cookMinutes: 0,
-    servings: 4,
-
-    ingredients: [emptyIngredient()],
-    steps: [""],
-  });
-
+  const [form, setForm] = useState<NewRecipeInput>(() => toForm(initialRecipe));
   const [busy, setBusy] = useState(false);
+
+  // when opening edit for a different recipe, sync form
+  useEffect(() => {
+    if (!open) return;
+    setForm(toForm(initialRecipe));
+  }, [open, initialRecipe?.id]);
 
   const canSubmit = useMemo(() => {
     const hasTitle = form.title.trim().length > 0;
     const hasDesc = form.description.trim().length > 0;
-
     const hasAtLeastOneIngredient = form.ingredients.some((i) => i.amount.trim() || i.name.trim());
-
     const hasAtLeastOneStep = form.steps.some((s) => s.trim().length > 0);
 
     return hasTitle && hasDesc && hasAtLeastOneIngredient && hasAtLeastOneStep;
   }, [form]);
-
-  function reset() {
-    setForm({
-      title: "",
-      description: "",
-      imageUrl: undefined,
-
-      prepMinutes: 0,
-      cookMinutes: 0,
-      servings: 4,
-
-      ingredients: [emptyIngredient()],
-      steps: [""],
-    });
-  }
 
   function handlePickImage() {
     inputRef.current?.click();
@@ -104,7 +99,10 @@ export function CreateRecipeDialog({ open, onClose, onCreate }: Props) {
   }
 
   function addIngredient() {
-    setForm((prev) => ({ ...prev, ingredients: [...prev.ingredients, emptyIngredient()] }));
+    setForm((prev) => ({
+      ...prev,
+      ingredients: [...prev.ingredients, emptyIngredient()],
+    }));
   }
 
   function removeIngredient(idx: number) {
@@ -133,7 +131,7 @@ export function CreateRecipeDialog({ open, onClose, onCreate }: Props) {
     });
   }
 
-  async function handleCreate() {
+  async function handleSubmit() {
     if (!canSubmit) return;
     setBusy(true);
 
@@ -143,46 +141,58 @@ export function CreateRecipeDialog({ open, onClose, onCreate }: Props) {
 
     const cleanedSteps = form.steps.map((s) => s.trim()).filter(Boolean);
 
-    const recipe: Recipe = {
-      id: makeId(),
-      title: form.title.trim(),
-      description: form.description.trim(),
-      imageUrl: form.imageUrl,
+    if (mode === "create") {
+      const recipe: Recipe = {
+        id: makeId(),
+        title: form.title.trim(),
+        description: form.description.trim(),
+        imageUrl: form.imageUrl || DEFAULT_RECIPE_IMAGE,
+        creator: { name: "You" },
+        prepMinutes: clampInt(form.prepMinutes, 0),
+        cookMinutes: clampInt(form.cookMinutes, 0),
+        servings: clampInt(form.servings, 1),
+        likes: 0,
+        ingredients: cleanedIngredients.length ? cleanedIngredients : [emptyIngredient()],
+        steps: cleanedSteps.length ? cleanedSteps : ["(Add steps later)"],
+      };
 
-      creator: { name: "You" },
+      onCreate?.(recipe);
+    } else {
+      if (!initialRecipe) {
+        setBusy(false);
+        return;
+      }
 
-      prepMinutes: clampInt(form.prepMinutes, 0),
-      cookMinutes: clampInt(form.cookMinutes, 0),
-      servings: clampInt(form.servings, 1),
+      const updated: Recipe = {
+        ...initialRecipe,
+        title: form.title.trim(),
+        description: form.description.trim(),
+        imageUrl: form.imageUrl || DEFAULT_RECIPE_IMAGE,
+        prepMinutes: clampInt(form.prepMinutes, 0),
+        cookMinutes: clampInt(form.cookMinutes, 0),
+        servings: clampInt(form.servings, 1),
+        ingredients: cleanedIngredients.length ? cleanedIngredients : [emptyIngredient()],
+        steps: cleanedSteps.length ? cleanedSteps : ["(Add steps later)"],
+      };
 
-      likes: 0,
-      ingredients: cleanedIngredients.length ? cleanedIngredients : [emptyIngredient()],
-      steps: cleanedSteps.length ? cleanedSteps : ["(Add steps later)"],
-    };
-
-    onCreate(recipe);
+      onUpdate?.(updated);
+    }
 
     setBusy(false);
-    reset();
-    onClose();
-  }
-
-  function handleClose() {
-    reset();
     onClose();
   }
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 2 }}>
         <Typography variant="h6" sx={{ fontWeight: 900 }}>
-          Create New Recipe
+          {mode === "create" ? "Create New Recipe" : "Edit Recipe"}
         </Typography>
 
         <Box sx={{ flex: 1 }} />
 
-        <IconButton onClick={handleClose} aria-label="Close dialog">
-          <CloseRoundedIcon />
+        <IconButton onClick={onClose} aria-label="Close dialog">
+          <CloseRounded />
         </IconButton>
       </DialogTitle>
 
@@ -214,12 +224,12 @@ export function CreateRecipeDialog({ open, onClose, onCreate }: Props) {
                 <Box
                   component="img"
                   src={form.imageUrl}
-                  alt="Uploaded"
+                  alt="Recipe"
                   sx={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
               ) : (
                 <Stack alignItems="center" spacing={1}>
-                  <UploadRoundedIcon color="primary" />
+                  <UploadRounded color="primary" />
                   <Typography variant="body2" color="text.secondary">
                     Click to upload image
                   </Typography>
@@ -230,7 +240,6 @@ export function CreateRecipeDialog({ open, onClose, onCreate }: Props) {
             <input ref={inputRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
           </Box>
 
-          {/* Title / Description */}
           <TextField
             label="Recipe Title *"
             placeholder="Enter recipe title"
@@ -249,7 +258,6 @@ export function CreateRecipeDialog({ open, onClose, onCreate }: Props) {
             minRows={3}
           />
 
-          {/* Times + Servings */}
           <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
             <TextField
               label="Prep Time (min)"
@@ -287,12 +295,7 @@ export function CreateRecipeDialog({ open, onClose, onCreate }: Props) {
                 Ingredients
               </Typography>
 
-              <Button
-                onClick={addIngredient}
-                variant="outlined"
-                startIcon={<AddRoundedIcon />}
-                sx={{ borderRadius: 999 }}
-              >
+              <Button onClick={addIngredient} variant="outlined" startIcon={<AddRounded />} sx={{ borderRadius: 999 }}>
                 Add
               </Button>
             </Stack>
@@ -312,7 +315,7 @@ export function CreateRecipeDialog({ open, onClose, onCreate }: Props) {
                   fullWidth
                 />
                 <IconButton aria-label="Remove ingredient" onClick={() => removeIngredient(idx)}>
-                  <DeleteOutlineRoundedIcon />
+                  <DeleteOutlineRounded />
                 </IconButton>
               </Stack>
             ))}
@@ -327,7 +330,7 @@ export function CreateRecipeDialog({ open, onClose, onCreate }: Props) {
                 Instructions
               </Typography>
 
-              <Button onClick={addStep} variant="outlined" startIcon={<AddRoundedIcon />} sx={{ borderRadius: 999 }}>
+              <Button onClick={addStep} variant="outlined" startIcon={<AddRounded />} sx={{ borderRadius: 999 }}>
                 Add Step
               </Button>
             </Stack>
@@ -359,19 +362,18 @@ export function CreateRecipeDialog({ open, onClose, onCreate }: Props) {
                 />
 
                 <IconButton aria-label="Remove step" onClick={() => removeStep(idx)} sx={{ mt: 0.5 }}>
-                  <DeleteOutlineRoundedIcon />
+                  <DeleteOutlineRounded />
                 </IconButton>
               </Stack>
             ))}
           </Stack>
 
-          {/* Actions */}
           <Stack direction="row" justifyContent="flex-end" spacing={1.25} sx={{ pt: 1 }}>
-            <Button variant="text" onClick={handleClose}>
+            <Button variant="text" onClick={onClose}>
               Cancel
             </Button>
-            <Button variant="contained" onClick={handleCreate} disabled={!canSubmit || busy}>
-              Create Recipe
+            <Button variant="contained" onClick={handleSubmit} disabled={!canSubmit || busy}>
+              {mode === "create" ? "Create Recipe" : "Save Changes"}
             </Button>
           </Stack>
         </Stack>

@@ -5,7 +5,6 @@ export const mockRecipes: Recipe[] = [
     id: "margherita",
     title: "Classic Margherita Pizza",
     description: "A traditional Italian pizza with fresh mozzarella, tomatoes, and basil on a crispy homemade crust.",
-    imageUrl: "https://images.unsplash.com/photo-1548365328-8b849e6f2a9d?auto=format&fit=crop&w=1600&q=80",
     creator: { name: "Sophie Laurent" },
     prepMinutes: 15,
     cookMinutes: 30,

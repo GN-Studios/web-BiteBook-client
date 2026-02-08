@@ -8,7 +8,7 @@ export function EmptyState({ title, subtitle }: { title: string; subtitle: strin
       sx={{
         border: "1px solid rgba(0,0,0,0.06)",
         bgcolor: "rgba(242,140,40,0.06)",
-        borderRadius: 5,
+        borderRadius: 4,
         py: 8,
         display: "grid",
         placeItems: "center",

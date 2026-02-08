@@ -40,7 +40,7 @@ export function Sidebar({ width }: Props) {
               sx={{
                 width: 52,
                 height: 52,
-                borderRadius: 2.5,
+                borderRadius: 2,
                 color: active ? "primary.main" : "text.secondary",
                 bgcolor: active ? "rgba(242,140,40,0.14)" : "transparent",
                 "&:hover": {

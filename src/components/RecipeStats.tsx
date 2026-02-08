@@ -27,7 +27,7 @@ export function RecipeStats({ prep, cook, total, servings }: Props) {
     <Paper
       elevation={0}
       sx={{
-        borderRadius: 4,
+        borderRadius: 1,
         border: "1px solid rgba(0,0,0,0.06)",
         bgcolor: "rgba(0,0,0,0.02)",
         px: { xs: 2, md: 3 },

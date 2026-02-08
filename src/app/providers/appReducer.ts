@@ -16,6 +16,32 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, recipes, myRecipeIds };
     }
 
+    case "UPDATE_RECIPE": {
+      return {
+        ...state,
+        recipes: state.recipes.map((r) => (r.id === action.recipe.id ? action.recipe : r)),
+      };
+    }
+
+    case "DELETE_RECIPE": {
+      const nextRecipes = state.recipes.filter((r) => r.id !== action.recipeId);
+
+      // if deleted recipe was featured, fallback to first recipe (or keep undefined)
+      const nextFeatured =
+        state.featuredRecipeId === action.recipeId ? (nextRecipes[0]?.id ?? "") : state.featuredRecipeId;
+
+      // also remove from liked
+      const nextLiked = new Set(state.likedIds);
+      nextLiked.delete(action.recipeId);
+
+      return {
+        ...state,
+        recipes: nextRecipes,
+        featuredRecipeId: nextFeatured,
+        likedIds: nextLiked,
+      };
+    }
+
     case "SET_FEATURED":
       return { ...state, featuredRecipeId: action.recipeId };
 

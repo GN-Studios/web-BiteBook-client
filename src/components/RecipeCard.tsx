@@ -1,31 +1,42 @@
-import { Box, Card, CardActionArea, CardContent, CardMedia, IconButton, Stack, Typography } from "@mui/material";
-import FavoriteBorderRoundedIcon from "@mui/icons-material/FavoriteBorderRounded";
-import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
-import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
-import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
-import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
+import React from "react";
+import { Box, Card, CardActionArea, CardContent, CardMedia, IconButton, Paper, Stack, Typography } from "@mui/material";
+import {
+  FavoriteBorderRounded,
+  FavoriteRounded,
+  AccessTimeRounded,
+  Groups2Rounded,
+  EditRounded,
+  DeleteOutlineRounded,
+  ChatBubbleOutlineRounded,
+} from "@mui/icons-material";
+
 import type { Recipe } from "../types/recipe";
+
+const DEFAULT_RECIPE_IMAGE =
+  "https://images.unsplash.com/photo-1495521821757-a1efb6729352?auto=format&fit=crop&w=1200&q=80";
 
 type Props = {
   recipe: Recipe;
   liked: boolean;
   onToggleLike: () => void;
   onOpen: () => void;
+
+  // only for "My Recipes"
+  showOwnerActions?: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
 };
 
-export function RecipeCard({ recipe, liked, onToggleLike, onOpen }: Props) {
+export function RecipeCard({ recipe, liked, onToggleLike, onOpen, showOwnerActions = false, onEdit, onDelete }: Props) {
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
-  const commentsCount = recipe.commentsCount ?? 0;
-
-  // if you want EXACT behaviour like Base44:
-  // keep the displayed likes as recipe.likes (don't auto +1 locally)
   const displayedLikes = recipe.likes + (liked ? 1 : 0);
+  const commentsCount = recipe.commentsCount ?? 0;
 
   return (
     <Card
       elevation={0}
       sx={{
-        borderRadius: 4,
+        borderRadius: 2,
         overflow: "hidden",
         bgcolor: "background.paper",
         border: "1px solid rgba(0,0,0,0.06)",
@@ -36,97 +47,79 @@ export function RecipeCard({ recipe, liked, onToggleLike, onOpen }: Props) {
         },
       }}
     >
-      {/* Image area */}
       <Box sx={{ position: "relative" }}>
-        <CardActionArea onClick={onOpen} sx={{ display: "block" }}>
+        <CardActionArea onClick={onOpen}>
           <CardMedia
             component="img"
-            image={recipe.imageUrl}
+            src={recipe.imageUrl || DEFAULT_RECIPE_IMAGE}
             alt={recipe.title}
             sx={{
-              height: 260, // closer to your screenshot card height
+              width: "100%",
+              height: 260,
               objectFit: "cover",
-              bgcolor: "rgba(0,0,0,0.04)",
+              display: "block",
             }}
           />
         </CardActionArea>
 
-        {/* Floating like button */}
-        <IconButton
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onToggleLike();
-          }}
-          aria-label={liked ? "Unlike recipe" : "Like recipe"}
+        {showOwnerActions ? (
+          <Stack direction="row" spacing={1} sx={{ position: "absolute", top: 12, left: 12 }}>
+            <Paper elevation={0} sx={{ borderRadius: 999 }}>
+              <IconButton size="small" onClick={onEdit} aria-label="Edit recipe">
+                <EditRounded fontSize="small" />
+              </IconButton>
+            </Paper>
+            <Paper elevation={0} sx={{ borderRadius: 999 }}>
+              <IconButton size="small" onClick={onDelete} aria-label="Delete recipe">
+                <DeleteOutlineRounded fontSize="small" />
+              </IconButton>
+            </Paper>
+          </Stack>
+        ) : null}
+
+        <Paper
+          elevation={0}
           sx={{
             position: "absolute",
-            top: 14,
-            right: 14,
-            width: 40,
-            height: 40,
-            bgcolor: "rgba(255,255,255,0.92)",
-            border: "1px solid rgba(0,0,0,0.08)",
-            "&:hover": { bgcolor: "white" },
+            top: 12,
+            right: 12,
+            borderRadius: 999,
           }}
         >
-          {liked ? <FavoriteRoundedIcon color="primary" /> : <FavoriteBorderRoundedIcon />}
-        </IconButton>
+          <IconButton size="small" onClick={onToggleLike} aria-label={liked ? "Unlike" : "Like"}>
+            {liked ? <FavoriteRounded color="primary" /> : <FavoriteBorderRounded />}
+          </IconButton>
+        </Paper>
       </Box>
 
-      {/* Content */}
-      <CardContent sx={{ p: 2.25 }}>
-        <Typography
-          sx={{
-            fontWeight: 900,
-            fontSize: 18,
-            lineHeight: 1.2,
-            mb: 0.75,
-          }}
-          noWrap
-        >
+      <CardContent sx={{ p: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 900 }}>
           {recipe.title}
         </Typography>
 
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{
-            mb: 2,
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
-        >
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
           {recipe.description}
         </Typography>
 
-        {/* Footer row */}
-        <Stack direction="row" alignItems="center" sx={{ color: "text.secondary" }}>
-          {/* Left side: time + servings */}
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <Stack direction="row" spacing={0.75} alignItems="center">
-              <AccessTimeRoundedIcon sx={{ fontSize: 18, opacity: 0.9 }} />
-              <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                {totalMinutes} min
-              </Typography>
-            </Stack>
+        <Stack direction="row" spacing={2} sx={{ mt: 1.5 }} alignItems="center">
+          <Stack direction="row" spacing={0.8} alignItems="center">
+            <AccessTimeRounded fontSize="small" color="action" />
+            <Typography variant="body2" color="text.secondary">
+              {totalMinutes} min
+            </Typography>
+          </Stack>
 
-            <Stack direction="row" spacing={0.75} alignItems="center">
-              <PeopleAltOutlinedIcon sx={{ fontSize: 18, opacity: 0.9 }} />
-              <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                {recipe.servings}
-              </Typography>
-            </Stack>
+          <Stack direction="row" spacing={0.8} alignItems="center">
+            <Groups2Rounded fontSize="small" color="action" />
+            <Typography variant="body2" color="text.secondary">
+              {recipe.servings}
+            </Typography>
           </Stack>
 
           <Box sx={{ flex: 1 }} />
-
-          {/* Right side: likes + comments */}
           <Stack direction="row" spacing={1.6} alignItems="center">
             <Stack direction="row" spacing={0.6} alignItems="center">
-              <FavoriteRoundedIcon
+              <FavoriteRounded
                 sx={{
                   fontSize: 18,
                   color: liked ? "primary.main" : "success.main", // closer “accented” like the screenshot
@@ -144,7 +137,7 @@ export function RecipeCard({ recipe, liked, onToggleLike, onOpen }: Props) {
             </Stack>
 
             <Stack direction="row" spacing={0.6} alignItems="center">
-              <ChatBubbleOutlineRoundedIcon sx={{ fontSize: 18, opacity: 0.85 }} />
+              <ChatBubbleOutlineRounded sx={{ fontSize: 18, opacity: 0.85 }} />
               <Typography variant="body2" sx={{ fontWeight: 800 }}>
                 {commentsCount}
               </Typography>

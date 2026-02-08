@@ -6,14 +6,14 @@ export const theme = createTheme({
     primary: { main: "#F28C28" }, // orange accent
     background: {
       default: "#FBF7F2", // warm beige
-      paper: "#FFFFFF"
+      paper: "#FFFFFF",
     },
     text: {
       primary: "#2D2A26",
-      secondary: "#6A635B"
-    }
+      secondary: "#6A635B",
+    },
   },
-  shape: { borderRadius: 16 },
+  shape: { borderRadius: 12 },
   typography: {
     fontFamily: [
       "ui-sans-serif",
@@ -24,19 +24,19 @@ export const theme = createTheme({
       "Helvetica",
       "Arial",
       "Apple Color Emoji",
-      "Segoe UI Emoji"
+      "Segoe UI Emoji",
     ].join(","),
     h4: { fontWeight: 800 },
     h5: { fontWeight: 800 },
-    button: { textTransform: "none", fontWeight: 700 }
+    button: { textTransform: "none", fontWeight: 700 },
   },
   components: {
     MuiPaper: {
       styleOverrides: {
         root: {
-          backgroundImage: "none"
-        }
-      }
-    }
-  }
+          backgroundImage: "none",
+        },
+      },
+    },
+  },
 });
