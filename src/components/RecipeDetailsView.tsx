@@ -27,6 +27,9 @@ type Props = {
 
 type Comment = { id: string; text: string };
 
+const DEFAULT_RECIPE_IMAGE =
+  "https://images.unsplash.com/photo-1495521821757-a1efb6729352?auto=format&fit=crop&w=1200&q=80";
+
 const IngredientPill = ({ amount, name }: { amount: string; name: string }) => {
   return (
     <Paper
@@ -118,7 +121,7 @@ export const RecipeDetailsView = ({ recipe, variant, liked, likeCount, onToggleL
         >
           <Box
             component="img"
-            src={recipe.imageUrl}
+            src={recipe.imageUrl || DEFAULT_RECIPE_IMAGE}
             alt={recipe.title}
             sx={{
               width: "100%",
