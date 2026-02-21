@@ -1,6 +1,12 @@
-import { Avatar, Box, Button, Paper, Stack, Tab, Tabs, Typography } from "@mui/material";
+import { Avatar, Box, Button, IconButton, Paper, Stack, Tab, Tabs, TextField, Typography } from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import SaveIcon from "@mui/icons-material/Save";
+import CloseIcon from "@mui/icons-material/Close";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
-import { useMemo, useState } from "react";
+import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createFakeToken, getUserFromToken, setToken, clearToken } from "../app/auth";
 import { useNavigate } from "react-router-dom";
 
 import { useAppStore } from "../app/providers";
@@ -13,6 +19,53 @@ export const ProfilePage = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<Recipe | null>(null);
   const navigate = useNavigate();
+  const [user, setUser] = useState<{ name?: string; email?: string; avatar?: string } | null>(null);
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [usernameInput, setUsernameInput] = useState("");
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const u = getUserFromToken();
+    setUser(u);
+    if (u?.name) {
+      setUsernameInput(u.name);
+    }
+  }, []);
+
+  const handleFile = (file?: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const avatar = reader.result as string;
+      const newUser = { ...(user ?? {}), avatar };
+      setUser(newUser);
+      // persist into token
+      const token = createFakeToken(newUser);
+      setToken(token);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeAvatar = () => {
+    const newUser = { ...(user ?? {}) };
+    delete newUser.avatar;
+    setUser(newUser);
+    const token = createFakeToken(newUser);
+    setToken(token);
+  };
+
+  const handleSaveUsername = () => {
+    const newUser = { ...(user ?? {}), name: usernameInput };
+    setUser(newUser);
+    const token = createFakeToken(newUser);
+    setToken(token);
+    setEditingUsername(false);
+  };
+
+  const handleCancelEdit = () => {
+    setUsernameInput(user?.name ?? "");
+    setEditingUsername(false);
+  };
 
   const myRecipes = useMemo(() => {
     return state.recipes.filter((recipe: Recipe) => state.myRecipeIds.has(recipe.id));
@@ -42,11 +95,64 @@ export const ProfilePage = () => {
     <Box>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
         <Stack direction="row" spacing={1.5} alignItems="center">
-          <Avatar sx={{ bgcolor: "primary.main", fontWeight: 900 }}>ש</Avatar>
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 900 }}>
-              שקד גורן
-            </Typography>
+          <Stack direction="row" spacing={1.25} alignItems="center">
+            <Avatar
+              src={user?.avatar ?? undefined}
+              sx={{ bgcolor: "primary.main", fontWeight: 900, width: 64, height: 64 }}
+            >
+              {user?.name ? user.name[0] : "ש"}
+            </Avatar>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => handleFile(e.target.files?.[0])}
+            />
+            <IconButton onClick={() => fileRef.current?.click()}>
+              <PhotoCameraIcon />
+            </IconButton>
+            {user?.avatar && (
+              <IconButton onClick={removeAvatar} aria-label="remove avatar">
+                <DeleteOutlineIcon />
+              </IconButton>
+            )}
+          </Stack>
+          <Box sx={{ flex: 1 }}>
+            {editingUsername ? (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <TextField
+                  size="small"
+                  value={usernameInput}
+                  onChange={(e) => setUsernameInput(e.target.value)}
+                  autoFocus
+                />
+                <IconButton
+                  size="small"
+                  onClick={handleSaveUsername}
+                  color="primary"
+                  aria-label="save username"
+                >
+                  <SaveIcon />
+                </IconButton>
+                <IconButton size="small" onClick={handleCancelEdit} aria-label="cancel edit">
+                  <CloseIcon />
+                </IconButton>
+              </Stack>
+            ) : (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Typography variant="h6" sx={{ fontWeight: 900 }}>
+                  {user?.name ?? "שקד גורן"}
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => setEditingUsername(true)}
+                  aria-label="edit username"
+                >
+                  <EditIcon />
+                </IconButton>
+              </Stack>
+            )}
             <Typography variant="body2" color="text.secondary">
               {myRecipes.length} recipes
             </Typography>
@@ -58,7 +164,8 @@ export const ProfilePage = () => {
           startIcon={<LogoutRoundedIcon />}
           sx={{ borderRadius: 999 }}
           onClick={() => {
-            navigate("/explore");
+            clearToken();
+            navigate("/login");
           }}
         >
           Sign Out
