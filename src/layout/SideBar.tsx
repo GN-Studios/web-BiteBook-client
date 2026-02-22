@@ -1,6 +1,12 @@
 import { Box, IconButton, Tooltip } from "@mui/material";
-import { ExploreOutlined, AutoAwesomeOutlined, PersonOutlineRounded } from "@mui/icons-material";
-import { NavLink, useLocation } from "react-router-dom";
+import {
+  ExploreOutlined,
+  AutoAwesomeOutlined,
+  PersonOutlineRounded,
+  LogoutRounded,
+} from "@mui/icons-material";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { clearToken } from "../app/auth";
 
 type Props = { width: number };
 
@@ -12,6 +18,12 @@ const navItems = [
 
 export const Sidebar = ({ width }: Props) => {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    clearToken();
+    navigate("/login");
+  };
 
   return (
     <Box
@@ -27,7 +39,9 @@ export const Sidebar = ({ width }: Props) => {
       }}
     >
       {navItems.map((item) => {
-        const active = location.pathname === item.to || (item.to !== "/" && location.pathname.startsWith(item.to));
+        const active =
+          location.pathname === item.to ||
+          (item.to !== "/" && location.pathname.startsWith(item.to));
 
         return (
           <Tooltip key={item.to} title={item.label} placement="right">
@@ -42,7 +56,9 @@ export const Sidebar = ({ width }: Props) => {
                 color: active ? "primary.main" : "text.secondary",
                 bgcolor: active ? "rgba(242,140,40,0.14)" : "transparent",
                 "&:hover": {
-                  bgcolor: active ? "rgba(242,140,40,0.18)" : "rgba(0,0,0,0.04)",
+                  bgcolor: active
+                    ? "rgba(242,140,40,0.18)"
+                    : "rgba(0,0,0,0.04)",
                 },
               }}
             >
@@ -51,6 +67,25 @@ export const Sidebar = ({ width }: Props) => {
           </Tooltip>
         );
       })}
+      <Box sx={{ flex: 1 }} />
+      <Tooltip title="Logout" placement="right">
+        <IconButton
+          onClick={handleLogout}
+          aria-label="logout"
+          sx={{
+            width: 52,
+            height: 52,
+            borderRadius: 2,
+            color: "text.secondary",
+            "&:hover": {
+              bgcolor: "rgba(0,0,0,0.04)",
+              color: "error.main",
+            },
+          }}
+        >
+          <LogoutRounded />
+        </IconButton>
+      </Tooltip>
     </Box>
   );
 };
