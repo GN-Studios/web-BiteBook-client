@@ -26,6 +26,7 @@ export const ProfilePage = () => {
   const [editingUsername, setEditingUsername] = useState(false);
   const [usernameInput, setUsernameInput] = useState("");
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const [myRecipesAll, setMyRecipesAll] = useState<Recipe[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -105,8 +106,8 @@ export const ProfilePage = () => {
   };
 
   const myRecipes = useMemo(() => {
-    return state.recipes.filter((recipe: Recipe) => state.myRecipeIds.has(recipe.id));
-  }, [state.recipes, state.myRecipeIds]);
+    return myRecipesAll.length ? myRecipesAll : state.recipes.filter((recipe: Recipe) => state.myRecipeIds.has(recipe.id));
+  }, [myRecipesAll, state.recipes, state.myRecipeIds]);
 
   const likedRecipes = useMemo(() => {
     return state.recipes.filter((recipe: Recipe) => state.likedIds.has(recipe.id));
@@ -132,6 +133,7 @@ export const ProfilePage = () => {
       try {
         const userRecipes = await getUserRecipes(user._id);
         if (!mounted) return;
+        setMyRecipesAll(userRecipes);
         userRecipes.forEach((r) => {
           if (!state.myRecipeIds.has(r.id)) {
             dispatch({ type: "ADD_RECIPE", recipe: r, addToMyRecipes: true });
