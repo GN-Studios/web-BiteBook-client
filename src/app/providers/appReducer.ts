@@ -9,6 +9,28 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
       return { ...state, likedIds };
     }
 
+    case "SET_LIKED_IDS": {
+      return { ...state, likedIds: action.likedIds };
+    }
+
+    case "LIKE_RECIPE": {
+      const likedIds = new Set(state.likedIds);
+      likedIds.add(action.recipeId);
+      const recipes = state.recipes.map((r) =>
+        r.id === action.recipeId ? { ...r, likes: r.likes + 1 } : r,
+      );
+      return { ...state, likedIds, recipes };
+    }
+
+    case "UNLIKE_RECIPE": {
+      const likedIds = new Set(state.likedIds);
+      likedIds.delete(action.recipeId);
+      const recipes = state.recipes.map((r) =>
+        r.id === action.recipeId ? { ...r, likes: Math.max(0, r.likes - 1) } : r,
+      );
+      return { ...state, likedIds, recipes };
+    }
+
     case "ADD_RECIPE": {
       const recipes = [action.recipe, ...state.recipes];
       const myRecipeIds = new Set(state.myRecipeIds);
@@ -44,6 +66,14 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         featuredRecipeId: nextFeatured,
         likedIds: nextLiked,
       };
+    }
+
+    case "SET_RECIPES": {
+      return { ...state, recipes: action.recipes };
+    }
+
+    case "SET_RECIPES_PAGINATION": {
+      return { ...state, recipesPagination: action.pagination };
     }
 
     case "SET_FEATURED":

@@ -7,9 +7,7 @@ const SIDEBAR_WIDTH = 88;
 
 export const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
-  const showSidebar = !["login", "register"].includes(
-    location.pathname.split("/")[1],
-  );
+  const showSidebar = !["login", "register"].includes(location.pathname.split("/")[1]);
 
   return (
     <Box
@@ -26,9 +24,6 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
             width: SIDEBAR_WIDTH,
             position: "fixed",
             height: "100vh",
-            left: 0,
-            top: 0,
-            zIndex: 100,
           }}
         >
           <Sidebar width={SIDEBAR_WIDTH} />
@@ -45,10 +40,7 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
       >
         <BrandBar />
         <Divider sx={{ opacity: 0.5 }} />
-        <Box
-          component="main"
-          sx={{ flex: 1, overflow: "auto", p: { xs: 2, md: 3 } }}
-        >
+        <Box component="main" sx={{ flex: 1, overflow: "auto", p: { xs: 2, md: 3 } }}>
           {children}
         </Box>
       </Box>

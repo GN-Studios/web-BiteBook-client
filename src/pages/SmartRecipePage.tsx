@@ -23,7 +23,7 @@ const fetchAIRecipeSuggestions = async (
   description: string,
 ): Promise<Recipe[]> => {
   try {
-    const response = await apiClient.post("/api/chatgpt/suggest-recipes", {
+    const response = await apiClient.post("/chatgpt/suggest-recipes", {
       input: description,
     });
 

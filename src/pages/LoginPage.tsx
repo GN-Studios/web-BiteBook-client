@@ -1,52 +1,61 @@
 import React, { useState } from "react";
-import { Box, Button, Paper, TextField, Typography, Divider } from "@mui/material";
+import { Box, Button, Paper, TextField, Typography, Divider, Snackbar, Alert } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
-import { createFakeToken, setToken } from "../app/auth";
+import { setToken, setUser } from "../app/auth";
+import { login, googleLogin } from "../api";
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [openError, setOpenError] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login", { username, password });
-    // create a fake token (replace with real auth later)
-    const user = { name: username };
-    const token = createFakeToken(user);
-    setToken(token);
-    navigate("/profile");
+    (async () => {
+      try {
+        const res = await login({ username, password });
+        setToken(res.token);
+        setUser(res.user);
+        navigate("/explorer");
+      } catch (err: any) {
+        // extract message from server response
+        const msg = err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message ?? "Login failed";
+        setError(String(msg));
+        setOpenError(true);
+        return;
+      }
+    })();
   };
 
-  const handleGoogleSuccess = (credentialResponse: any) => {
-    console.log("Google login success:", credentialResponse);
-    // Decode the JWT credential
-    const base64Url = credentialResponse.credential.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(""),
-    );
-    const googleUser = JSON.parse(jsonPayload);
-    console.log("Google user data:", googleUser);
-    
-    // Create a token with Google user info
-    const user = { 
-      name: googleUser.name, 
-      email: googleUser.email,
-      avatar: googleUser.picture,
-      provider: "google",
-    };
-    const token = createFakeToken(user);
-    setToken(token);
-    navigate("/profile");
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    try {
+      console.log("Google login success:", credentialResponse);
+      // Send the credential to the backend for verification
+      const res = await googleLogin(credentialResponse.credential);
+      setToken(res.token);
+      setUser(res.user);
+      navigate("/explorer");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message ?? "Google login failed";
+      setError(String(msg));
+      setOpenError(true);
+    }
   };
 
   const handleGoogleError = () => {
-    console.log("Google login failed");
+    setError("Google login failed");
+    setOpenError(true);
+  };
+
+  const handleCloseError = () => {
+    setOpenError(false);
+    setError(null);
+    // clear inputs when alert closes
+    setUsername("");
+    setPassword("");
   };
 
   return (
@@ -76,21 +85,17 @@ export const LoginPage: React.FC = () => {
           </Button>
           <Divider sx={{ my: 2 }}>OR</Divider>
           <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              text="signin"
-            />
+            <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} text="signin" />
           </Box>
-          <Button
-            onClick={() => navigate("/register")}
-            color="inherit"
-            fullWidth
-            sx={{ mt: 1 }}
-          >
+          <Button onClick={() => navigate("/register")} color="inherit" fullWidth sx={{ mt: 1 }}>
             Create account
           </Button>
         </Box>
+        <Snackbar open={openError} autoHideDuration={6000} onClose={handleCloseError}>
+          <Alert onClose={handleCloseError} severity="error" sx={{ width: "100%" }}>
+            {error}
+          </Alert>
+        </Snackbar>
       </Paper>
     </Box>
   );

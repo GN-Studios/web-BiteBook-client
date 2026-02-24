@@ -1,17 +1,20 @@
 import { Avatar, Box, Button, IconButton, Paper, Stack, Tab, Tabs, TextField, Typography } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import SaveIcon from "@mui/icons-material/Save";
-import CloseIcon from "@mui/icons-material/Close";
-import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
-import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import { Edit, Save, Close, LogoutRounded, PhotoCamera, DeleteOutline } from "@mui/icons-material";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createFakeToken, getUserFromToken, setToken, clearToken } from "../app/auth";
+import { clearToken, clearUser, getStoredUser, getToken, parseJwtPayload, setUser } from "../app/auth";
 import { useNavigate } from "react-router-dom";
-
 import { useAppStore } from "../app/providers";
+import { deleteRecipe, updateRecipe, getUserRecipes, getUserById, updateUser, getLikesByUser, addLike, removeLike } from "../api";
 import { RecipeCard, EmptyState, CreateRecipeDialog } from "../components";
 import type { Recipe } from "../types";
+
+type UserProfile = {
+  _id: string;
+  username: string;
+  name?: string;
+  email?: string;
+  image?: string | null;
+};
 
 export const ProfilePage = () => {
   const { state, dispatch } = useAppStore();
@@ -19,62 +22,99 @@ export const ProfilePage = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<Recipe | null>(null);
   const navigate = useNavigate();
-  const [user, setUser] = useState<{ name?: string; email?: string; avatar?: string } | null>(null);
+  const [user, setUserState] = useState<UserProfile | null>(null);
   const [editingUsername, setEditingUsername] = useState(false);
   const [usernameInput, setUsernameInput] = useState("");
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const [myRecipesAll, setMyRecipesAll] = useState<Recipe[]>([]);
+  const [likedRecipesAll, setLikedRecipesAll] = useState<Recipe[]>([]);
 
   useEffect(() => {
-    const u = getUserFromToken();
-    setUser(u);
-    if (u?.name) {
-      setUsernameInput(u.name);
+    let mounted = true;
+    const stored = getStoredUser() as UserProfile | null;
+    if (stored && mounted) {
+      setUserState(stored);
+      setUsernameInput(stored.name ?? stored.username ?? "");
     }
+
+    (async () => {
+      const tokenPayload = parseJwtPayload(getToken());
+      const tokenId = tokenPayload?.id as string | undefined;
+      const id = stored?._id ?? tokenId;
+      if (!id) {
+        if (mounted) navigate("/login");
+        return;
+      }
+      try {
+        const fresh = await getUserById(id);
+        if (!mounted) return;
+        setUserState(fresh as UserProfile);
+        setUser(fresh as Record<string, any>);
+        setUsernameInput(fresh.name ?? fresh.username ?? "");
+      } catch (err) {
+        console.warn("Failed to load user profile:", err);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleFile = (file?: File) => {
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
-      const avatar = reader.result as string;
-      const newUser = { ...(user ?? {}), avatar };
-      setUser(newUser);
-      // persist into token
-      const token = createFakeToken(newUser);
-      setToken(token);
+    reader.onload = async () => {
+      const image = reader.result as string;
+      if (!user?._id) return;
+      try {
+        const res = await updateUser(user._id, { image });
+        setUserState(res.user as UserProfile);
+        setUser(res.user as Record<string, any>);
+      } catch (err) {
+        console.error("Failed to update avatar:", err);
+      }
     };
     reader.readAsDataURL(file);
   };
 
-  const removeAvatar = () => {
-    const newUser = { ...(user ?? {}) };
-    delete newUser.avatar;
-    setUser(newUser);
-    const token = createFakeToken(newUser);
-    setToken(token);
+  const removeAvatar = async () => {
+    if (!user?._id) return;
+    try {
+      const res = await updateUser(user._id, { image: null });
+      setUserState(res.user as UserProfile);
+      setUser(res.user as Record<string, any>);
+    } catch (err) {
+      console.error("Failed to remove avatar:", err);
+    }
   };
 
-  const handleSaveUsername = () => {
-    const newUser = { ...(user ?? {}), name: usernameInput };
-    setUser(newUser);
-    const token = createFakeToken(newUser);
-    setToken(token);
-    setEditingUsername(false);
+  const handleSaveUsername = async () => {
+    if (!user?._id) return;
+    try {
+      const res = await updateUser(user._id, { username: usernameInput, name: usernameInput });
+      setUserState(res.user as UserProfile);
+      setUser(res.user as Record<string, any>);
+      setEditingUsername(false);
+    } catch (err) {
+      console.error("Failed to update username:", err);
+    }
   };
 
   const handleCancelEdit = () => {
-    setUsernameInput(user?.name ?? "");
+    setUsernameInput(user?.name ?? user?.username ?? "");
     setEditingUsername(false);
   };
 
   const myRecipes = useMemo(() => {
-    return state.recipes.filter((recipe: Recipe) => state.myRecipeIds.has(recipe.id));
-  }, [state.recipes, state.myRecipeIds]);
+    return myRecipesAll.length ? myRecipesAll : state.recipes.filter((recipe: Recipe) => state.myRecipeIds.has(recipe.id));
+  }, [myRecipesAll, state.recipes, state.myRecipeIds]);
 
   const likedRecipes = useMemo(() => {
-    return state.recipes.filter((recipe: Recipe) => state.likedIds.has(recipe.id));
-  }, [state.recipes, state.likedIds]);
+    return likedRecipesAll.length ? likedRecipesAll : state.recipes.filter((recipe: Recipe) => state.likedIds.has(recipe.id));
+  }, [likedRecipesAll, state.recipes, state.likedIds]);
 
+  const showEmptyMy = tab === "my" && myRecipes.length === 0;
   const showEmptyLiked = tab === "liked" && likedRecipes.length === 0;
 
   const openEdit = (recipe: Recipe) => {
@@ -87,8 +127,91 @@ export const ProfilePage = () => {
     setEditing(null);
   };
 
-  const deleteRecipe = (id: string) => {
-    dispatch({ type: "DELETE_RECIPE", recipeId: id });
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      if (!user?._id) return;
+      try {
+        const userRecipes = await getUserRecipes(user._id);
+        if (!mounted) return;
+        setMyRecipesAll(userRecipes);
+        userRecipes.forEach((r) => {
+          if (!state.myRecipeIds.has(r.id)) {
+            dispatch({ type: "ADD_RECIPE", recipe: r, addToMyRecipes: true });
+          }
+        });
+      } catch (err) {
+        console.warn("Failed to load user recipes:", err);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [dispatch, state.myRecipeIds, user?._id]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      if (!user?._id) return;
+      try {
+        const liked = await getLikesByUser(user._id);
+        if (!mounted) return;
+        setLikedRecipesAll(liked);
+        const likedIds = new Set(liked.map((r) => r.id));
+        dispatch({ type: "SET_LIKED_IDS", likedIds });
+        liked.forEach((r) => {
+          if (!state.recipes.find((sr) => sr.id === r.id)) {
+            dispatch({ type: "ADD_RECIPE", recipe: r, addToMyRecipes: false });
+          }
+        });
+      } catch (err) {
+        console.warn("Failed to load liked recipes:", err);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [dispatch, state.recipes, user?._id]);
+
+  const onRecipeDelete = async (id: string) => {
+    try {
+      await deleteRecipe(id);
+      dispatch({ type: "DELETE_RECIPE", recipeId: id });
+      setMyRecipesAll((prev) => prev.filter((r) => r.id !== id));
+      setLikedRecipesAll((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      console.error("Failed to delete recipe:", err);
+    }
+  };
+
+  const onRecipeUpdate = async (recipe: Recipe) => {
+    try {
+      const res = await updateRecipe(recipe.id, recipe);
+      dispatch({ type: "UPDATE_RECIPE", recipe: res });
+      setMyRecipesAll((prev) => prev.map((r) => (r.id === res.id ? res : r)));
+      setLikedRecipesAll((prev) => prev.map((r) => (r.id === res.id ? res : r)));
+      closeEdit();
+    } catch (err) {
+      console.error("Failed to update recipe:", err);
+    }
+  };
+
+  const handleToggleLike = async (recipeId: string, isLiked: boolean) => {
+    try {
+      if (isLiked) {
+        await removeLike(recipeId);
+        dispatch({ type: "UNLIKE_RECIPE", recipeId });
+      } else {
+        await addLike(recipeId);
+        dispatch({ type: "LIKE_RECIPE", recipeId });
+      }
+    } catch (err) {
+      console.error("Failed to toggle like:", err);
+    }
   };
 
   return (
@@ -97,10 +220,10 @@ export const ProfilePage = () => {
         <Stack direction="row" spacing={1.5} alignItems="center">
           <Stack direction="row" spacing={1.25} alignItems="center">
             <Avatar
-              src={user?.avatar ?? undefined}
+              src={user?.image ?? undefined}
               sx={{ bgcolor: "primary.main", fontWeight: 900, width: 64, height: 64 }}
             >
-              {user?.name ? user.name[0] : "ש"}
+              {user?.name ? user.name[0] : user?.username ? user.username[0] : "ש"}
             </Avatar>
             <input
               ref={fileRef}
@@ -110,11 +233,11 @@ export const ProfilePage = () => {
               onChange={(e) => handleFile(e.target.files?.[0])}
             />
             <IconButton onClick={() => fileRef.current?.click()}>
-              <PhotoCameraIcon />
+              <PhotoCamera />
             </IconButton>
-            {user?.avatar && (
+            {user?.image && (
               <IconButton onClick={removeAvatar} aria-label="remove avatar">
-                <DeleteOutlineIcon />
+                <DeleteOutline />
               </IconButton>
             )}
           </Stack>
@@ -127,29 +250,20 @@ export const ProfilePage = () => {
                   onChange={(e) => setUsernameInput(e.target.value)}
                   autoFocus
                 />
-                <IconButton
-                  size="small"
-                  onClick={handleSaveUsername}
-                  color="primary"
-                  aria-label="save username"
-                >
-                  <SaveIcon />
+                <IconButton size="small" onClick={handleSaveUsername} color="primary" aria-label="save username">
+                  <Save />
                 </IconButton>
                 <IconButton size="small" onClick={handleCancelEdit} aria-label="cancel edit">
-                  <CloseIcon />
+                  <Close />
                 </IconButton>
               </Stack>
             ) : (
               <Stack direction="row" spacing={1} alignItems="center">
                 <Typography variant="h6" sx={{ fontWeight: 900 }}>
-                  {user?.name ?? "שקד גורן"}
+                  {user?.name ?? user?.username ?? "שקד גורן"}
                 </Typography>
-                <IconButton
-                  size="small"
-                  onClick={() => setEditingUsername(true)}
-                  aria-label="edit username"
-                >
-                  <EditIcon />
+                <IconButton size="small" onClick={() => setEditingUsername(true)} aria-label="edit username">
+                  <Edit />
                 </IconButton>
               </Stack>
             )}
@@ -158,20 +272,19 @@ export const ProfilePage = () => {
             </Typography>
           </Box>
         </Stack>
-
         <Button
           variant="outlined"
-          startIcon={<LogoutRoundedIcon />}
+          startIcon={<LogoutRounded />}
           sx={{ borderRadius: 999 }}
           onClick={() => {
             clearToken();
+            clearUser();
             navigate("/login");
           }}
         >
           Sign Out
         </Button>
       </Stack>
-
       <Paper
         elevation={0}
         sx={{
@@ -187,29 +300,35 @@ export const ProfilePage = () => {
         </Tabs>
       </Paper>
 
-      {showEmptyLiked ? (
-        <EmptyState title="No liked recipes" subtitle="Like recipes to save them here" />
+      {showEmptyMy || showEmptyLiked ? (
+        <EmptyState
+          title={tab === "my" ? "No recipes yet" : "No liked recipes"}
+          subtitle={tab === "my" ? "Create your first recipe" : "Like recipes to save them here"}
+        />
       ) : (
         <Stack spacing={2.25}>
           {(tab === "my" ? myRecipes : likedRecipes).map((recipe: Recipe) => {
+            const liked = state.likedIds.has(recipe.id);
             return (
               <Box key={recipe.id}>
                 <RecipeCard
                   recipe={recipe}
-                  liked={state.likedIds.has(recipe.id)}
-                  onToggleLike={() => dispatch({ type: "TOGGLE_LIKE", recipeId: recipe.id })}
+                  liked={liked}
+                  onToggleLike={() => handleToggleLike(recipe.id, liked)}
                   onOpen={() => navigate(`/recipe/${recipe.id}`)}
-                  showOwnerActions
+                  showOwnerActions={tab === "my"}
                   onEdit={() => openEdit(recipe)}
-                  onDelete={() => deleteRecipe(recipe.id)}
+                  onDelete={() => onRecipeDelete(recipe.id)}
                 />
-                <CreateRecipeDialog
-                  open={editOpen}
-                  mode="edit"
-                  initialRecipe={editing ?? undefined}
-                  onClose={closeEdit}
-                  onUpdate={(updated) => dispatch({ type: "UPDATE_RECIPE", recipe: updated })}
-                />
+                {tab === "my" && (
+                  <CreateRecipeDialog
+                    open={editOpen}
+                    mode="edit"
+                    initialRecipe={editing ?? undefined}
+                    onClose={closeEdit}
+                    onUpdate={(updated) => onRecipeUpdate(updated)}
+                  />
+                )}
               </Box>
             );
           })}

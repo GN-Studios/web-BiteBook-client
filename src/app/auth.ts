@@ -1,8 +1,5 @@
-// Lightweight auth helper to prepare for JWT usage.
-// Currently creates and stores a fake unsigned JWT in localStorage under `auth_token`.
-// Later you can replace token creation/storage with real server-issued JWTs.
-
 const TOKEN_KEY = "auth_token";
+const USER_KEY = "auth_user";
 
 const base64UrlEncode = (str: string) => {
   // proper unicode-safe base64
@@ -24,6 +21,23 @@ const base64UrlDecode = (b64u: string) => {
 export const setToken = (token: string) => localStorage.setItem(TOKEN_KEY, token);
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
 export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+
+export const setUser = (u: Record<string, any> | null) => {
+  if (!u) localStorage.removeItem(USER_KEY);
+  else localStorage.setItem(USER_KEY, JSON.stringify(u));
+};
+
+export const getStoredUser = () => {
+  const v = localStorage.getItem(USER_KEY);
+  if (!v) return null;
+  try {
+    return JSON.parse(v);
+  } catch {
+    return null;
+  }
+};
+
+export const clearUser = () => localStorage.removeItem(USER_KEY);
 
 export const parseJwtPayload = (token: string | null) => {
   if (!token) return null;
@@ -54,15 +68,15 @@ export const getUserFromToken = () => {
   if (!p) return null;
   // expect user fields like name/email/avatar at top-level
   const { name, email, avatar } = p;
-  return { name, email, avatar };
+  if (name || email || avatar) return { name, email, avatar };
+  // fallback to stored user (server returned user object alongside token)
+  return getStoredUser();
 };
 
 export const createFakeToken = (user: Record<string, any>, expiresInSeconds = 60 * 60) => {
   const header = { alg: "none", typ: "JWT" };
   const exp = Math.floor(Date.now() / 1000) + expiresInSeconds;
   const payload = { ...user, exp };
-  const token = `${base64UrlEncode(JSON.stringify(header))}.${base64UrlEncode(
-    JSON.stringify(payload),
-  )}.`;
+  const token = `${base64UrlEncode(JSON.stringify(header))}.${base64UrlEncode(JSON.stringify(payload))}.`;
   return token;
 };

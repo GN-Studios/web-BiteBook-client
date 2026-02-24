@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   Avatar,
   Box,
@@ -12,8 +12,20 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { ArrowBackRounded, FavoriteBorderRounded, FavoriteRounded, SendRounded } from "@mui/icons-material";
+import {
+  ArrowBackRounded,
+  FavoriteBorderRounded,
+  FavoriteRounded,
+  SendRounded,
+} from "@mui/icons-material";
 import type { Recipe } from "../types";
+import {
+  getCommentsByRecipeId,
+  createComment,
+  deleteComment,
+  type Comment,
+} from "../api/comments";
+import { getStoredUser } from "../app/auth";
 import { RecipeStatistics } from "./RecipeStatistics";
 
 type Props = {
@@ -24,8 +36,6 @@ type Props = {
   onToggleLike: () => void;
   onBack?: () => void;
 };
-
-type Comment = { id: string; text: string };
 
 const DEFAULT_RECIPE_IMAGE =
   "https://images.unsplash.com/photo-1495521821757-a1efb6729352?auto=format&fit=crop&w=1200&q=80";
@@ -83,12 +93,43 @@ const InstructionRow = ({ index, text }: { index: number; text: string }) => {
   );
 };
 
-export const RecipeDetailsView = ({ recipe, variant, liked, likeCount, onToggleLike, onBack }: Props) => {
+export const RecipeDetailsView = ({
+  recipe,
+  variant,
+  liked,
+  likeCount,
+  onToggleLike,
+  onBack,
+}: Props) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [draft, setDraft] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [posting, setPosting] = useState(false);
 
   const badgeLabel = variant === "daily" ? "Daily Recipe" : "Recipe";
   const showBackButton = variant === "details" && typeof onBack === "function";
+
+  // Load comments when recipe changes
+  useEffect(() => {
+    if (variant !== "details") return;
+
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const fetchedComments = await getCommentsByRecipeId(recipe.id);
+        if (mounted) setComments(fetchedComments);
+      } catch (err) {
+        console.error("Failed to load comments:", err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [recipe.id, variant]);
 
   const cleanedIngredients = useMemo(() => {
     return recipe.ingredients
@@ -103,10 +144,38 @@ export const RecipeDetailsView = ({ recipe, variant, liked, likeCount, onToggleL
 
   const canPost = draft.trim().length > 0;
 
-  const postComment = () => {
-    if (!canPost) return;
-    setComments((prev) => [{ id: crypto.randomUUID(), text: draft.trim() }, ...prev]);
-    setDraft("");
+  const postComment = async () => {
+    if (!canPost || posting) return;
+
+    const user = getStoredUser() as { _id?: string; name?: string } | null;
+    if (!user?._id) {
+      console.error("User not authenticated");
+      return;
+    }
+
+    setPosting(true);
+    try {
+      const newComment = await createComment({
+        text: draft.trim(),
+        userId: user._id,
+        recipeId: recipe.id,
+      });
+      setComments((prev) => [newComment, ...prev]);
+      setDraft("");
+    } catch (err) {
+      console.error("Failed to post comment:", err);
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      await deleteComment(commentId);
+      setComments((prev) => prev.filter((c) => c._id !== commentId));
+    } catch (err) {
+      console.error("Failed to delete comment:", err);
+    }
   };
 
   return (
@@ -185,15 +254,25 @@ export const RecipeDetailsView = ({ recipe, variant, liked, likeCount, onToggleL
               >
                 {recipe.title}
               </Typography>
-              <Typography color="text.secondary" sx={{ mt: 1.25, maxWidth: 760 }}>
+              <Typography
+                color="text.secondary"
+                sx={{ mt: 1.25, maxWidth: 760 }}
+              >
                 {recipe.description}
               </Typography>
-              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mt: 2.2 }}>
+              <Stack
+                direction="row"
+                spacing={1.5}
+                alignItems="center"
+                sx={{ mt: 2.2 }}
+              >
                 <Avatar sx={{ bgcolor: "primary.main", fontWeight: 900 }}>
                   {recipe.creator.name.slice(0, 1).toUpperCase()}
                 </Avatar>
                 <Box>
-                  <Typography sx={{ fontWeight: 900, lineHeight: 1.15 }}>{recipe.creator.name}</Typography>
+                  <Typography sx={{ fontWeight: 900, lineHeight: 1.15 }}>
+                    {recipe.creator.name}
+                  </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Recipe Creator
                   </Typography>
@@ -213,8 +292,17 @@ export const RecipeDetailsView = ({ recipe, variant, liked, likeCount, onToggleL
                 gap: 1,
               }}
             >
-              <IconButton size="small" onClick={onToggleLike} aria-label={liked ? "Unlike" : "Like"} sx={{ p: 0.5 }}>
-                {liked ? <FavoriteRounded color="primary" /> : <FavoriteBorderRounded />}
+              <IconButton
+                size="small"
+                onClick={onToggleLike}
+                aria-label={liked ? "Unlike" : "Like"}
+                sx={{ p: 0.5 }}
+              >
+                {liked ? (
+                  <FavoriteRounded color="primary" />
+                ) : (
+                  <FavoriteBorderRounded />
+                )}
               </IconButton>
               <Typography sx={{ fontWeight: 900 }}>{likeCount}</Typography>
             </Paper>
@@ -230,7 +318,10 @@ export const RecipeDetailsView = ({ recipe, variant, liked, likeCount, onToggleL
         <Grid container spacing={2}>
           {cleanedIngredients.map((ingredient, idx) => (
             <Grid key={`${ingredient.name}-${idx}`} item xs={12} md={6}>
-              <IngredientPill amount={ingredient.amount} name={ingredient.name} />
+              <IngredientPill
+                amount={ingredient.amount}
+                name={ingredient.name}
+              />
             </Grid>
           ))}
         </Grid>
@@ -240,7 +331,11 @@ export const RecipeDetailsView = ({ recipe, variant, liked, likeCount, onToggleL
         </Typography>
         <Stack spacing={2.5}>
           {steps.map((step, idx) => (
-            <InstructionRow key={`${idx}-${step}`} index={idx + 1} text={step} />
+            <InstructionRow
+              key={`${idx}-${step}`}
+              index={idx + 1}
+              text={step}
+            />
           ))}
         </Stack>
         <Divider sx={{ my: 4 }} />
@@ -256,7 +351,15 @@ export const RecipeDetailsView = ({ recipe, variant, liked, likeCount, onToggleL
           }}
         >
           <Stack direction="row" spacing={1.5} alignItems="flex-start">
-            <Avatar sx={{ bgcolor: "primary.main", fontWeight: 900 }}>ש</Avatar>
+            <Avatar
+              sx={{
+                bgcolor: "primary.main",
+                fontWeight: 900,
+                flex: "0 0 auto",
+              }}
+            >
+              {getStoredUser()?.name?.slice(0, 1).toUpperCase() || "U"}
+            </Avatar>
             <Box sx={{ flex: 1 }}>
               <TextField
                 value={draft}
@@ -265,12 +368,13 @@ export const RecipeDetailsView = ({ recipe, variant, liked, likeCount, onToggleL
                 fullWidth
                 multiline
                 minRows={3}
+                disabled={posting}
               />
               <Stack direction="row" justifyContent="flex-end" sx={{ mt: 2 }}>
                 <Button
                   variant="contained"
                   onClick={postComment}
-                  disabled={!canPost}
+                  disabled={!canPost || posting}
                   startIcon={<SendRounded />}
                   sx={{
                     borderRadius: 2.5,
@@ -279,31 +383,88 @@ export const RecipeDetailsView = ({ recipe, variant, liked, likeCount, onToggleL
                     "&:hover": { bgcolor: "#F0A66E" },
                   }}
                 >
-                  Post Comment
+                  {posting ? "Posting..." : "Post Comment"}
                 </Button>
               </Stack>
             </Box>
           </Stack>
-          {comments.length === 0 ? (
-            <Typography color="text.secondary" sx={{ textAlign: "center", mt: 3.5, mb: 1 }}>
+          {loading ? (
+            <Typography
+              color="text.secondary"
+              sx={{ textAlign: "center", mt: 3.5, mb: 1 }}
+            >
+              Loading comments...
+            </Typography>
+          ) : comments.length === 0 ? (
+            <Typography
+              color="text.secondary"
+              sx={{ textAlign: "center", mt: 3.5, mb: 1 }}
+            >
               No comments yet. Be the first to share your thoughts!
             </Typography>
           ) : (
             <Stack spacing={1.25} sx={{ mt: 2.5 }}>
-              {comments.map((c) => (
-                <Paper
-                  key={c.id}
-                  elevation={0}
-                  sx={{
-                    borderRadius: 3,
-                    bgcolor: "#FBF7F2",
-                    border: "1px solid rgba(0,0,0,0.06)",
-                    p: 1.5,
-                  }}
-                >
-                  <Typography sx={{ whiteSpace: "pre-wrap" }}>{c.text}</Typography>
-                </Paper>
-              ))}
+              {comments.map((c) => {
+                const currentUser = getStoredUser() as { _id?: string } | null;
+                const isOwnComment = currentUser?._id === c.userId._id;
+                return (
+                  <Paper
+                    key={c._id}
+                    elevation={0}
+                    sx={{
+                      borderRadius: 3,
+                      bgcolor: "#FBF7F2",
+                      border: "1px solid rgba(0,0,0,0.06)",
+                      p: 1.5,
+                    }}
+                  >
+                    <Stack direction="row" spacing={1} alignItems="flex-start">
+                      <Avatar
+                        sx={{
+                          bgcolor: "primary.main",
+                          fontWeight: 900,
+                          width: 32,
+                          height: 32,
+                          fontSize: 14,
+                        }}
+                      >
+                        {c.userId.name.slice(0, 1).toUpperCase()}
+                      </Avatar>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography sx={{ fontWeight: 700, fontSize: 14 }}>
+                          {c.userId.name}
+                        </Typography>
+                        <Typography
+                          sx={{ whiteSpace: "pre-wrap", fontSize: 13, mt: 0.5 }}
+                        >
+                          {c.text}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ mt: 0.75, display: "block" }}
+                        >
+                          {new Date(c.createdAt).toLocaleDateString()} at{" "}
+                          {new Date(c.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </Typography>
+                      </Box>
+                      {isOwnComment && (
+                        <Button
+                          size="small"
+                          color="error"
+                          onClick={() => handleDeleteComment(c._id)}
+                          sx={{ mt: 0.5, minWidth: "auto" }}
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </Stack>
+                  </Paper>
+                );
+              })}
             </Stack>
           )}
         </Paper>
