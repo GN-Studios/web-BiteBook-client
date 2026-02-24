@@ -181,6 +181,8 @@ export const ProfilePage = () => {
     try {
       await deleteRecipe(id);
       dispatch({ type: "DELETE_RECIPE", recipeId: id });
+      setMyRecipesAll((prev) => prev.filter((r) => r.id !== id));
+      setLikedRecipesAll((prev) => prev.filter((r) => r.id !== id));
     } catch (err) {
       console.error("Failed to delete recipe:", err);
     }
@@ -190,6 +192,9 @@ export const ProfilePage = () => {
     try {
       const res = await updateRecipe(recipe.id, recipe);
       dispatch({ type: "UPDATE_RECIPE", recipe: res });
+      setMyRecipesAll((prev) => prev.map((r) => (r.id === res.id ? res : r)));
+      setLikedRecipesAll((prev) => prev.map((r) => (r.id === res.id ? res : r)));
+      closeEdit();
     } catch (err) {
       console.error("Failed to update recipe:", err);
     }
