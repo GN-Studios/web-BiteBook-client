@@ -25,6 +25,9 @@ export type AppState = {
 
 export type AppAction =
   | { type: "TOGGLE_LIKE"; recipeId: string }
+  | { type: "SET_LIKED_IDS"; likedIds: Set<string> }
+  | { type: "LIKE_RECIPE"; recipeId: string }
+  | { type: "UNLIKE_RECIPE"; recipeId: string }
   | { type: "ADD_RECIPE"; recipe: Recipe; addToMyRecipes?: boolean }
   | { type: "UPDATE_RECIPE"; recipe: Recipe }
   | { type: "DELETE_RECIPE"; recipeId: string }

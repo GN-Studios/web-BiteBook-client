@@ -3,7 +3,7 @@ import { AddRounded } from "@mui/icons-material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { RecipeCard, CreateRecipeDialog } from "../components";
-import { createRecipe, getRecipesPage } from "../api";
+import { createRecipe, getRecipesPage, addLike, removeLike } from "../api";
 import { useAppStore } from "../app/providers";
 import type { NewRecipeInput, Recipe } from "../types";
 
@@ -33,9 +33,20 @@ export const ExplorePage = () => {
   };
 
   useEffect(() => {
-    if (recipes.length === 0 && !loadingPage) {
-      fetchPage(1, false);
-    }
+    // Reset and fetch recipes when page mounts
+    dispatch({ type: "SET_RECIPES", recipes: [] });
+    dispatch({
+      type: "SET_RECIPES_PAGINATION",
+      pagination: {
+        page: 1,
+        limit: 12,
+        total: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false,
+      },
+    });
+    fetchPage(1, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -75,6 +86,20 @@ export const ExplorePage = () => {
     }
   };
 
+  const handleToggleLike = async (recipeId: string, isLiked: boolean) => {
+    try {
+      if (isLiked) {
+        await removeLike(recipeId);
+        dispatch({ type: "UNLIKE_RECIPE", recipeId });
+      } else {
+        await addLike(recipeId);
+        dispatch({ type: "LIKE_RECIPE", recipeId });
+      }
+    } catch (err) {
+      console.error("Failed to toggle like:", err);
+    }
+  };
+
   return (
     <Box sx={{ position: "relative" }}>
       <Stack spacing={2.25}>
@@ -88,9 +113,7 @@ export const ExplorePage = () => {
                 <RecipeCard
                   recipe={recipe}
                   liked={liked}
-                  onToggleLike={() =>
-                    dispatch({ type: "TOGGLE_LIKE", recipeId: recipe.id })
-                  }
+                  onToggleLike={() => handleToggleLike(recipe.id, liked)}
                   onOpen={() => navigate(`/recipe/${recipe.id}`)}
                 />
               </Grid>

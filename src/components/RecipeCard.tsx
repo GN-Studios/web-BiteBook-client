@@ -8,6 +8,7 @@ import {
   DeleteOutlineRounded,
   ChatBubbleOutlineRounded,
 } from "@mui/icons-material";
+import { useState } from "react";
 import type { Recipe } from "../types";
 
 const DEFAULT_RECIPE_IMAGE =
@@ -16,7 +17,7 @@ const DEFAULT_RECIPE_IMAGE =
 type Props = {
   recipe: Recipe;
   liked: boolean;
-  onToggleLike: () => void;
+  onToggleLike: () => Promise<void> | void;
   onOpen: () => void;
 
   showOwnerActions?: boolean;
@@ -33,9 +34,21 @@ export const RecipeCard = ({
   onEdit,
   onDelete,
 }: Props) => {
+  const [liking, setLiking] = useState(false);
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
-  const displayedLikes = recipe.likes + (liked ? 1 : 0);
+  const displayedLikes = recipe.likes;
   const commentsCount = recipe.commentsCount ?? 0;
+
+  const handleToggleLike = async () => {
+    setLiking(true);
+    try {
+      await onToggleLike();
+    } catch (err) {
+      console.error("Failed to toggle like:", err);
+    } finally {
+      setLiking(false);
+    }
+  };
 
   return (
     <Card
@@ -89,7 +102,12 @@ export const RecipeCard = ({
             borderRadius: 999,
           }}
         >
-          <IconButton size="small" onClick={onToggleLike} aria-label={liked ? "Unlike" : "Like"}>
+          <IconButton
+            size="small"
+            onClick={handleToggleLike}
+            disabled={liking}
+            aria-label={liked ? "Unlike" : "Like"}
+          >
             {liked ? <FavoriteRounded color="primary" /> : <FavoriteBorderRounded />}
           </IconButton>
         </Paper>

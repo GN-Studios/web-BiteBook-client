@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { clearToken, clearUser, getStoredUser, getToken, parseJwtPayload, setUser } from "../app/auth";
 import { useNavigate } from "react-router-dom";
 import { useAppStore } from "../app/providers";
-import { deleteRecipe, updateRecipe, getUserRecipes, getUserById, updateUser } from "../api";
+import { deleteRecipe, updateRecipe, getUserRecipes, getUserById, updateUser, getLikesByUser, addLike, removeLike } from "../api";
 import { RecipeCard, EmptyState, CreateRecipeDialog } from "../components";
 import type { Recipe } from "../types";
 
@@ -27,6 +27,7 @@ export const ProfilePage = () => {
   const [usernameInput, setUsernameInput] = useState("");
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [myRecipesAll, setMyRecipesAll] = useState<Recipe[]>([]);
+  const [likedRecipesAll, setLikedRecipesAll] = useState<Recipe[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -110,9 +111,10 @@ export const ProfilePage = () => {
   }, [myRecipesAll, state.recipes, state.myRecipeIds]);
 
   const likedRecipes = useMemo(() => {
-    return state.recipes.filter((recipe: Recipe) => state.likedIds.has(recipe.id));
-  }, [state.recipes, state.likedIds]);
+    return likedRecipesAll.length ? likedRecipesAll : state.recipes.filter((recipe: Recipe) => state.likedIds.has(recipe.id));
+  }, [likedRecipesAll, state.recipes, state.likedIds]);
 
+  const showEmptyMy = tab === "my" && myRecipes.length === 0;
   const showEmptyLiked = tab === "liked" && likedRecipes.length === 0;
 
   const openEdit = (recipe: Recipe) => {
@@ -149,6 +151,32 @@ export const ProfilePage = () => {
     };
   }, [dispatch, state.myRecipeIds, user?._id]);
 
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      if (!user?._id) return;
+      try {
+        const liked = await getLikesByUser(user._id);
+        if (!mounted) return;
+        setLikedRecipesAll(liked);
+        const likedIds = new Set(liked.map((r) => r.id));
+        dispatch({ type: "SET_LIKED_IDS", likedIds });
+        liked.forEach((r) => {
+          if (!state.recipes.find((sr) => sr.id === r.id)) {
+            dispatch({ type: "ADD_RECIPE", recipe: r, addToMyRecipes: false });
+          }
+        });
+      } catch (err) {
+        console.warn("Failed to load liked recipes:", err);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [dispatch, state.recipes, user?._id]);
+
   const onRecipeDelete = async (id: string) => {
     try {
       await deleteRecipe(id);
@@ -164,6 +192,20 @@ export const ProfilePage = () => {
       dispatch({ type: "UPDATE_RECIPE", recipe: res });
     } catch (err) {
       console.error("Failed to update recipe:", err);
+    }
+  };
+
+  const handleToggleLike = async (recipeId: string, isLiked: boolean) => {
+    try {
+      if (isLiked) {
+        await removeLike(recipeId);
+        dispatch({ type: "UNLIKE_RECIPE", recipeId });
+      } else {
+        await addLike(recipeId);
+        dispatch({ type: "LIKE_RECIPE", recipeId });
+      }
+    } catch (err) {
+      console.error("Failed to toggle like:", err);
     }
   };
 
@@ -253,29 +295,35 @@ export const ProfilePage = () => {
         </Tabs>
       </Paper>
 
-      {showEmptyLiked ? (
-        <EmptyState title="No liked recipes" subtitle="Like recipes to save them here" />
+      {showEmptyMy || showEmptyLiked ? (
+        <EmptyState
+          title={tab === "my" ? "No recipes yet" : "No liked recipes"}
+          subtitle={tab === "my" ? "Create your first recipe" : "Like recipes to save them here"}
+        />
       ) : (
         <Stack spacing={2.25}>
           {(tab === "my" ? myRecipes : likedRecipes).map((recipe: Recipe) => {
+            const liked = state.likedIds.has(recipe.id);
             return (
               <Box key={recipe.id}>
                 <RecipeCard
                   recipe={recipe}
-                  liked={state.likedIds.has(recipe.id)}
-                  onToggleLike={() => dispatch({ type: "TOGGLE_LIKE", recipeId: recipe.id })}
+                  liked={liked}
+                  onToggleLike={() => handleToggleLike(recipe.id, liked)}
                   onOpen={() => navigate(`/recipe/${recipe.id}`)}
-                  showOwnerActions
+                  showOwnerActions={tab === "my"}
                   onEdit={() => openEdit(recipe)}
                   onDelete={() => onRecipeDelete(recipe.id)}
                 />
-                <CreateRecipeDialog
-                  open={editOpen}
-                  mode="edit"
-                  initialRecipe={editing ?? undefined}
-                  onClose={closeEdit}
-                  onUpdate={(updated) => onRecipeUpdate(updated)}
-                />
+                {tab === "my" && (
+                  <CreateRecipeDialog
+                    open={editOpen}
+                    mode="edit"
+                    initialRecipe={editing ?? undefined}
+                    onClose={closeEdit}
+                    onUpdate={(updated) => onRecipeUpdate(updated)}
+                  />
+                )}
               </Box>
             );
           })}
