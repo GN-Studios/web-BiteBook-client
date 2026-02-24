@@ -46,6 +46,14 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
       };
     }
 
+    case "SET_RECIPES": {
+      return { ...state, recipes: action.recipes };
+    }
+
+    case "SET_RECIPES_PAGINATION": {
+      return { ...state, recipesPagination: action.pagination };
+    }
+
     case "SET_FEATURED":
       return { ...state, featuredRecipeId: action.recipeId };
 

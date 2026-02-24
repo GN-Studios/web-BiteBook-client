@@ -20,16 +20,12 @@ type Props = {
   initialRecipe?: Recipe; // required for edit
   onClose: () => void;
 
-  onCreate?: (recipe: Recipe) => void;
+  onCreate?: (recipe: NewRecipeInput) => void;
   onUpdate?: (recipe: Recipe) => void;
 };
 
 const DEFAULT_RECIPE_IMAGE =
   "https://images.unsplash.com/photo-1495521821757-a1efb6729352?auto=format&fit=crop&w=1600&q=80";
-
-const makeId = () => {
-  return crypto.randomUUID();
-};
 
 const clampInt = (value: number, min: number) => {
   if (Number.isNaN(value)) return min;
@@ -142,21 +138,18 @@ export const CreateRecipeDialog = ({ open, mode, initialRecipe, onClose, onCreat
     const cleanedSteps = form.steps.map((s) => s.trim()).filter(Boolean);
 
     if (mode === "create") {
-      const recipe: Recipe = {
-        id: makeId(),
+      const input: NewRecipeInput = {
         title: form.title.trim(),
         description: form.description.trim(),
         imageUrl: form.imageUrl || DEFAULT_RECIPE_IMAGE,
-        creator: { name: "You" },
         prepMinutes: clampInt(form.prepMinutes, 0),
         cookMinutes: clampInt(form.cookMinutes, 0),
         servings: clampInt(form.servings, 1),
-        likes: 0,
         ingredients: cleanedIngredients.length ? cleanedIngredients : [emptyIngredient()],
         steps: cleanedSteps.length ? cleanedSteps : ["(Add steps later)"],
       };
 
-      onCreate?.(recipe);
+      onCreate?.(input);
     } else {
       if (!initialRecipe) {
         setBusy(false);

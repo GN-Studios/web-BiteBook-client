@@ -1,23 +1,75 @@
 import { Box, Fab, Grid, Stack, Typography } from "@mui/material";
 import { AddRounded } from "@mui/icons-material";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { RecipeCard, CreateRecipeDialog } from "../components";
-import { createRecipe } from "../api";
+import { createRecipe, getRecipesPage } from "../api";
 import { useAppStore } from "../app/providers";
-import type { Recipe } from "../types";
+import type { NewRecipeInput, Recipe } from "../types";
 
 export const ExplorePage = () => {
   const { state, dispatch } = useAppStore();
   const navigate = useNavigate();
   const [openCreate, setOpenCreate] = useState(false);
+  const [loadingPage, setLoadingPage] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const recipes = useMemo(() => state.recipes, [state.recipes]);
+  const pagination = state.recipesPagination;
 
-  const onRecipeCreate = async (recipe: Recipe) => {
+  const fetchPage = async (pageNumber: number, append: boolean) => {
+    setLoadingPage(true);
+    try {
+      const page = await getRecipesPage(pageNumber, pagination.limit);
+      const nextRecipes = append ? [...recipes, ...page.data] : page.data;
+      const unique = Array.from(new Map(nextRecipes.map((r) => [r.id, r])).values());
+      dispatch({ type: "SET_RECIPES", recipes: unique });
+      dispatch({ type: "SET_RECIPES_PAGINATION", pagination: page.pagination });
+    } catch (err) {
+      console.error("Failed to load recipes page:", err);
+    } finally {
+      setLoadingPage(false);
+    }
+  };
+
+  useEffect(() => {
+    if (recipes.length === 0 && !loadingPage) {
+      fetchPage(1, false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+    if (!pagination.hasNextPage) return;
+
+    const target = loadMoreRef.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && !loadingPage) {
+          fetchPage(pagination.page + 1, true);
+        }
+      },
+      { root: null, rootMargin: "200px", threshold: 0 },
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [pagination.hasNextPage, pagination.page, loadingPage, recipes.length]);
+
+  const onRecipeCreate = async (recipe: NewRecipeInput) => {
     try {
       const created = await createRecipe(recipe);
       dispatch({ type: "ADD_RECIPE", recipe: created, addToMyRecipes: true });
+      dispatch({
+        type: "SET_RECIPES_PAGINATION",
+        pagination: {
+          ...pagination,
+          total: pagination.total + 1,
+          totalPages: Math.max(pagination.totalPages, Math.ceil((pagination.total + 1) / pagination.limit)),
+        },
+      });
     } catch (err) {
       console.error("Failed to create recipe:", err);
     }
@@ -36,13 +88,17 @@ export const ExplorePage = () => {
                 <RecipeCard
                   recipe={recipe}
                   liked={liked}
-                  onToggleLike={() => dispatch({ type: "TOGGLE_LIKE", recipeId: recipe.id })}
+                  onToggleLike={() =>
+                    dispatch({ type: "TOGGLE_LIKE", recipeId: recipe.id })
+                  }
                   onOpen={() => navigate(`/recipe/${recipe.id}`)}
                 />
               </Grid>
             );
           })}
         </Grid>
+
+        <Box ref={loadMoreRef} sx={{ height: 1 }} />
       </Stack>
 
       <Fab
@@ -58,7 +114,12 @@ export const ExplorePage = () => {
       >
         <AddRounded />
       </Fab>
-      <CreateRecipeDialog open={openCreate} onClose={() => setOpenCreate(false)} onCreate={onRecipeCreate} mode="create" />
+      <CreateRecipeDialog
+        open={openCreate}
+        onClose={() => setOpenCreate(false)}
+        onCreate={onRecipeCreate}
+        mode="create"
+      />
     </Box>
   );
 };
