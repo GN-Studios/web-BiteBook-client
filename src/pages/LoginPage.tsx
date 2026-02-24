@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { Box, Button, Paper, TextField, Typography, Divider, Snackbar, Alert } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
-import { setToken, setUser, createFakeToken } from "../app/auth";
-import { login } from "../api";
+import { setToken, setUser } from "../app/auth";
+import { login, googleLogin } from "../api";
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -16,7 +16,7 @@ export const LoginPage: React.FC = () => {
     e.preventDefault();
     (async () => {
       try {
-        const res = await login({ email: username, password });
+        const res = await login({ username, password });
         setToken(res.token);
         setUser(res.user);
         navigate("/explorer");
@@ -30,36 +30,24 @@ export const LoginPage: React.FC = () => {
     })();
   };
 
-  const handleGoogleSuccess = (credentialResponse: any) => {
-    console.log("Google login success:", credentialResponse);
-    // Decode the JWT credential
-    const base64Url = credentialResponse.credential.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(""),
-    );
-    const googleUser = JSON.parse(jsonPayload);
-    console.log("Google user data:", googleUser);
-
-    // Create a token with Google user info
-    // For now create fake token from Google payload and store user
-    const user = {
-      name: googleUser.name,
-      email: googleUser.email,
-      avatar: googleUser.picture,
-      provider: "google",
-    };
-    const token = createFakeToken(user);
-    setToken(token);
-    setUser(user);
-    navigate("/profile");
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    try {
+      console.log("Google login success:", credentialResponse);
+      // Send the credential to the backend for verification
+      const res = await googleLogin(credentialResponse.credential);
+      setToken(res.token);
+      setUser(res.user);
+      navigate("/explorer");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message ?? "Google login failed";
+      setError(String(msg));
+      setOpenError(true);
+    }
   };
 
   const handleGoogleError = () => {
-    console.log("Google login failed");
+    setError("Google login failed");
+    setOpenError(true);
   };
 
   const handleCloseError = () => {

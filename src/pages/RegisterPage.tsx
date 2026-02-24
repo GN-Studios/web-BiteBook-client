@@ -31,7 +31,7 @@ export const RegisterPage: React.FC = () => {
     (async () => {
       try {
         const res = await apiRegister({
-          name: username,
+          username,
           email,
           password,
           image: avatar ?? undefined,
