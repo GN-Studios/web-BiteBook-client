@@ -22,7 +22,7 @@ export const getUserById = async (id: string) => {
 
 export const updateUser = async (
   id: string,
-  payload: { username?: string; name?: string; email?: string; password?: string; image?: string },
+  payload: { username?: string; name?: string; email?: string; password?: string; image?: string | null },
 ) => {
   const res = await api.put<{ message: string; user: User }>(`/users/${id}`, payload);
   return res.data;

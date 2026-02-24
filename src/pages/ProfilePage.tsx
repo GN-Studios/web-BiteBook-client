@@ -1,12 +1,20 @@
 import { Avatar, Box, Button, IconButton, Paper, Stack, Tab, Tabs, TextField, Typography } from "@mui/material";
 import { Edit, Save, Close, LogoutRounded, PhotoCamera, DeleteOutline } from "@mui/icons-material";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createFakeToken, getUserFromToken, setToken, clearToken } from "../app/auth";
+import { clearToken, clearUser, getStoredUser, getToken, parseJwtPayload, setUser } from "../app/auth";
 import { useNavigate } from "react-router-dom";
 import { useAppStore } from "../app/providers";
-import { deleteRecipe, updateRecipe, getUserRecipes } from "../api";
+import { deleteRecipe, updateRecipe, getUserRecipes, getUserById, updateUser } from "../api";
 import { RecipeCard, EmptyState, CreateRecipeDialog } from "../components";
 import type { Recipe } from "../types";
+
+type UserProfile = {
+  _id: string;
+  username: string;
+  name?: string;
+  email?: string;
+  image?: string | null;
+};
 
 export const ProfilePage = () => {
   const { state, dispatch } = useAppStore();
@@ -14,51 +22,85 @@ export const ProfilePage = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<Recipe | null>(null);
   const navigate = useNavigate();
-  const [user, setUser] = useState<{ name?: string; email?: string; avatar?: string } | null>(null);
+  const [user, setUserState] = useState<UserProfile | null>(null);
   const [editingUsername, setEditingUsername] = useState(false);
   const [usernameInput, setUsernameInput] = useState("");
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    const u = getUserFromToken();
-    setUser(u);
-    if (u?.name) {
-      setUsernameInput(u.name);
+    let mounted = true;
+    const stored = getStoredUser() as UserProfile | null;
+    if (stored && mounted) {
+      setUserState(stored);
+      setUsernameInput(stored.name ?? stored.username ?? "");
     }
+
+    (async () => {
+      const tokenPayload = parseJwtPayload(getToken());
+      const tokenId = tokenPayload?.id as string | undefined;
+      const id = stored?._id ?? tokenId;
+      if (!id) {
+        if (mounted) navigate("/login");
+        return;
+      }
+      try {
+        const fresh = await getUserById(id);
+        if (!mounted) return;
+        setUserState(fresh as UserProfile);
+        setUser(fresh as Record<string, any>);
+        setUsernameInput(fresh.name ?? fresh.username ?? "");
+      } catch (err) {
+        console.warn("Failed to load user profile:", err);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleFile = (file?: File) => {
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
-      const avatar = reader.result as string;
-      const newUser = { ...(user ?? {}), avatar };
-      setUser(newUser);
-      // persist into token
-      const token = createFakeToken(newUser);
-      setToken(token);
+    reader.onload = async () => {
+      const image = reader.result as string;
+      if (!user?._id) return;
+      try {
+        const res = await updateUser(user._id, { image });
+        setUserState(res.user as UserProfile);
+        setUser(res.user as Record<string, any>);
+      } catch (err) {
+        console.error("Failed to update avatar:", err);
+      }
     };
     reader.readAsDataURL(file);
   };
 
-  const removeAvatar = () => {
-    const newUser = { ...(user ?? {}) };
-    delete newUser.avatar;
-    setUser(newUser);
-    const token = createFakeToken(newUser);
-    setToken(token);
+  const removeAvatar = async () => {
+    if (!user?._id) return;
+    try {
+      const res = await updateUser(user._id, { image: null });
+      setUserState(res.user as UserProfile);
+      setUser(res.user as Record<string, any>);
+    } catch (err) {
+      console.error("Failed to remove avatar:", err);
+    }
   };
 
-  const handleSaveUsername = () => {
-    const newUser = { ...(user ?? {}), name: usernameInput };
-    setUser(newUser);
-    const token = createFakeToken(newUser);
-    setToken(token);
-    setEditingUsername(false);
+  const handleSaveUsername = async () => {
+    if (!user?._id) return;
+    try {
+      const res = await updateUser(user._id, { username: usernameInput, name: usernameInput });
+      setUserState(res.user as UserProfile);
+      setUser(res.user as Record<string, any>);
+      setEditingUsername(false);
+    } catch (err) {
+      console.error("Failed to update username:", err);
+    }
   };
 
   const handleCancelEdit = () => {
-    setUsernameInput(user?.name ?? "");
+    setUsernameInput(user?.name ?? user?.username ?? "");
     setEditingUsername(false);
   };
 
@@ -86,8 +128,9 @@ export const ProfilePage = () => {
     let mounted = true;
 
     (async () => {
+      if (!user?._id) return;
       try {
-        const userRecipes = await getUserRecipes(user?.name ?? "");
+        const userRecipes = await getUserRecipes(user._id);
         if (!mounted) return;
         userRecipes.forEach((r) => {
           if (!state.myRecipeIds.has(r.id)) {
@@ -102,7 +145,7 @@ export const ProfilePage = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [dispatch, state.myRecipeIds, user?._id]);
 
   const onRecipeDelete = async (id: string) => {
     try {
@@ -128,10 +171,10 @@ export const ProfilePage = () => {
         <Stack direction="row" spacing={1.5} alignItems="center">
           <Stack direction="row" spacing={1.25} alignItems="center">
             <Avatar
-              src={user?.avatar ?? undefined}
+              src={user?.image ?? undefined}
               sx={{ bgcolor: "primary.main", fontWeight: 900, width: 64, height: 64 }}
             >
-              {user?.name ? user.name[0] : "ש"}
+              {user?.name ? user.name[0] : user?.username ? user.username[0] : "ש"}
             </Avatar>
             <input
               ref={fileRef}
@@ -143,7 +186,7 @@ export const ProfilePage = () => {
             <IconButton onClick={() => fileRef.current?.click()}>
               <PhotoCamera />
             </IconButton>
-            {user?.avatar && (
+            {user?.image && (
               <IconButton onClick={removeAvatar} aria-label="remove avatar">
                 <DeleteOutline />
               </IconButton>
@@ -168,7 +211,7 @@ export const ProfilePage = () => {
             ) : (
               <Stack direction="row" spacing={1} alignItems="center">
                 <Typography variant="h6" sx={{ fontWeight: 900 }}>
-                  {user?.name ?? "שקד גורן"}
+                  {user?.name ?? user?.username ?? "שקד גורן"}
                 </Typography>
                 <IconButton size="small" onClick={() => setEditingUsername(true)} aria-label="edit username">
                   <Edit />
@@ -186,6 +229,7 @@ export const ProfilePage = () => {
           sx={{ borderRadius: 999 }}
           onClick={() => {
             clearToken();
+            clearUser();
             navigate("/login");
           }}
         >
