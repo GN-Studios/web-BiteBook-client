@@ -17,153 +17,6 @@ import { apiClient } from "../config/api";
 import type { Recipe } from "../types";
 
 // Demo recipes for testing
-const demoRecipes: Recipe[] = [
-  {
-    title: "Sheet Pan Roasted Chicken and Vegetables",
-    description:
-      "A healthy and easy one-pan meal featuring tender chicken thighs and a colorful medley of seasonal vegetables.",
-    ingredients: [
-      {
-        name: "boneless, skinless chicken thighs",
-        amount: "500g",
-      },
-      {
-        name: "broccoli florets",
-        amount: "2 cups",
-      },
-      {
-        name: "bell peppers (mixed colors)",
-        amount: "2 large",
-      },
-      {
-        name: "red onion",
-        amount: "1 medium",
-      },
-      {
-        name: "olive oil",
-        amount: "3 tbsp",
-      },
-      {
-        name: "garlic powder",
-        amount: "1 tsp",
-      },
-      {
-        name: "dried oregano",
-        amount: "1 tsp",
-      },
-      {
-        name: "salt and pepper",
-        amount: "to taste",
-      },
-    ],
-    steps: [
-      "Preheat your oven to 200°C (400°F).",
-      "Cut the chicken and vegetables into uniform bite-sized pieces.",
-      "Place all ingredients on a large rimmed baking sheet.",
-      "Drizzle with olive oil and sprinkle with seasonings. Toss well to coat evenly.",
-      "Spread the mixture in a single layer across the pan.",
-      "Roast for 20-25 minutes until the chicken is fully cooked and vegetables are tender-crisp.",
-    ],
-    prepMinutes: 15,
-    cookMinutes: 25,
-    servings: 4,
-  },
-  {
-    title: "Zesty Chicken and Vegetable Stir-Fry",
-    description:
-      "A vibrant and fast stir-fry with a ginger-soy glaze, perfect for a busy weeknight.",
-    ingredients: [
-      {
-        name: "chicken breast, thinly sliced",
-        amount: "400g",
-      },
-      {
-        name: "carrots, julienned",
-        amount: "2 medium",
-      },
-      {
-        name: "sugar snap peas",
-        amount: "150g",
-      },
-      {
-        name: "soy sauce",
-        amount: "3 tbsp",
-      },
-      {
-        name: "honey",
-        amount: "1 tbsp",
-      },
-      {
-        name: "fresh ginger, grated",
-        amount: "1 tsp",
-      },
-      {
-        name: "sesame oil",
-        amount: "1 tbsp",
-      },
-      {
-        name: "garlic cloves, minced",
-        amount: "2",
-      },
-    ],
-    steps: [
-      "In a small bowl, whisk together the soy sauce, honey, and ginger.",
-      "Heat sesame oil in a large wok or skillet over high heat.",
-      "Add the chicken slices and stir-fry until golden brown. Remove from the pan and set aside.",
-      "Add the carrots and snap peas to the same pan; stir-fry for 3-4 minutes until slightly softened.",
-      "Return the chicken to the pan and add the minced garlic, cooking for 1 minute.",
-      "Pour the sauce over everything and toss continuously until the sauce thickens and coats the ingredients.",
-    ],
-    prepMinutes: 20,
-    cookMinutes: 10,
-    servings: 3,
-  },
-  {
-    title: "Mediterranean Chicken & Veggie Skewers",
-    description:
-      "Flavorful grilled skewers marinated in lemon and herbs, served with charred vegetables.",
-    ingredients: [
-      {
-        name: "chicken breast, cut into chunks",
-        amount: "600g",
-      },
-      {
-        name: "zucchini, sliced into rounds",
-        amount: "2 medium",
-      },
-      {
-        name: "cherry tomatoes",
-        amount: "1 cup",
-      },
-      {
-        name: "lemon juice",
-        amount: "1/4 cup",
-      },
-      {
-        name: "dried thyme",
-        amount: "1 tsp",
-      },
-      {
-        name: "olive oil",
-        amount: "2 tbsp",
-      },
-      {
-        name: "garlic, minced",
-        amount: "2 cloves",
-      },
-    ],
-    steps: [
-      "In a bowl, mix olive oil, lemon juice, thyme, and garlic to create a marinade.",
-      "Toss the chicken chunks in the marinade and let sit for at least 15 minutes.",
-      "Thread the chicken, zucchini, and cherry tomatoes onto skewers, alternating between them.",
-      "Heat a grill pan or outdoor grill to medium-high heat.",
-      "Grill the skewers for 10-12 minutes, turning occasionally, until the chicken is cooked through and the vegetables are slightly charred.",
-    ],
-    prepMinutes: 25,
-    cookMinutes: 12,
-    servings: 4,
-  },
-];
 
 // TODO: Replace with actual AI API call when ready
 const fetchAIRecipeSuggestions = async (
@@ -179,13 +32,6 @@ const fetchAIRecipeSuggestions = async (
     console.error("Error fetching AI recipes:", error);
     throw error;
   }
-};
-
-type SearchHistory = {
-  id: string;
-  query: string;
-  recipes: Recipe[];
-  timestamp: number;
 };
 
 export const SmartRecipePage = () => {
@@ -207,7 +53,7 @@ export const SmartRecipePage = () => {
 
   // Timer for elapsed time
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isLoading && loadStartTime) {
       interval = setInterval(() => {
         setElapsedTime(Math.floor((Date.now() - loadStartTime) / 1000));
