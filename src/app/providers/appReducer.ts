@@ -45,6 +45,15 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
     case "SET_FEATURED":
       return { ...state, featuredRecipeId: action.recipeId };
 
+    case "ADD_SEARCH_HISTORY":
+      return {
+        ...state,
+        searchHistory: [action.item, ...state.searchHistory],
+      };
+
+    case "CLEAR_SEARCH_HISTORY":
+      return { ...state, searchHistory: [] };
+
     default: {
       const _exhaustive: never = action;
       return state;

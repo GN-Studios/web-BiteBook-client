@@ -13,6 +13,7 @@ import { SendRounded } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAppStore } from "../app/providers";
 import { RecipeCard } from "../components";
+import { apiClient } from "../config/api";
 import type { Recipe } from "../types";
 
 // Demo recipes for testing
@@ -168,20 +169,16 @@ const demoRecipes: Recipe[] = [
 const fetchAIRecipeSuggestions = async (
   description: string,
 ): Promise<Recipe[]> => {
-  // Placeholder - replace with actual AI API call
-  // Example: const response = await fetch('/api/ai/suggest-recipes', {
-  //   method: 'POST',
-  //   body: JSON.stringify({ description })
-  // });
-  console.log("AI Recipe Suggestion Request:", description);
+  try {
+    const response = await apiClient.post("/api/chatgpt/suggest-recipes", {
+      input: description,
+    });
 
-  // Simulate API delay (2 seconds)
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-
-  // Return 1-3 random recipes
-  const randomCount = Math.floor(Math.random() * 3) + 1; // 1-3 recipes
-  const shuffled = demoRecipes.sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, randomCount);
+    return response.data.recipes || [];
+  } catch (error) {
+    console.error("Error fetching AI recipes:", error);
+    throw error;
+  }
 };
 
 type SearchHistory = {
@@ -195,7 +192,6 @@ export const SmartRecipePage = () => {
   const { state, dispatch } = useAppStore();
   const navigate = useNavigate();
   const [inputText, setInputText] = useState("");
-  const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [loadStartTime, setLoadStartTime] = useState<number | null>(null);
@@ -207,7 +203,7 @@ export const SmartRecipePage = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [searchHistory, isLoading]);
+  }, [state.searchHistory, isLoading]);
 
   // Timer for elapsed time
   useEffect(() => {
@@ -237,15 +233,16 @@ export const SmartRecipePage = () => {
         dispatch({ type: "ADD_RECIPE", recipe, addToMyRecipes: false });
       });
 
-      setSearchHistory((prev) => [
-        ...prev,
-        {
+      // Save search history to global state
+      dispatch({
+        type: "ADD_SEARCH_HISTORY",
+        item: {
           id: Date.now().toString(),
           query,
           recipes,
           timestamp: Date.now(),
         },
-      ]);
+      });
     } catch (error) {
       console.error("Error fetching AI recipes:", error);
     } finally {
@@ -282,7 +279,7 @@ export const SmartRecipePage = () => {
         }}
       >
         {/* Empty State */}
-        {searchHistory.length === 0 && (
+        {state.searchHistory.length === 0 && (
           <Box
             sx={{
               display: "flex",
@@ -309,7 +306,7 @@ export const SmartRecipePage = () => {
         )}
 
         {/* Search History */}
-        {searchHistory.map((item) => (
+        {state.searchHistory.map((item) => (
           <Box key={item.id}>
             {/* User Query */}
             <Box
