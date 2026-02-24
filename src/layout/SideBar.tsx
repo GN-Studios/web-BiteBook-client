@@ -7,7 +7,7 @@ type Props = { width: number };
 
 const navItems = [
   { label: "Explore", to: "/explore", icon: <ExploreOutlined /> },
-  { label: "Daily", to: "/daily", icon: <AutoAwesomeOutlined /> },
+  { label: "Smart Recipe", to: "/smart-recipe", icon: <AutoAwesomeOutlined /> },
   { label: "My", to: "/profile", icon: <PersonOutlineRounded /> },
 ];
 

@@ -19,7 +19,9 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
     case "UPDATE_RECIPE": {
       return {
         ...state,
-        recipes: state.recipes.map((r) => (r.id === action.recipe.id ? action.recipe : r)),
+        recipes: state.recipes.map((r) =>
+          r.id === action.recipe.id ? action.recipe : r,
+        ),
       };
     }
 
@@ -28,7 +30,9 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
 
       // if deleted recipe was featured, fallback to first recipe (or keep undefined)
       const nextFeatured =
-        state.featuredRecipeId === action.recipeId ? (nextRecipes[0]?.id ?? "") : state.featuredRecipeId;
+        state.featuredRecipeId === action.recipeId
+          ? (nextRecipes[0]?.id ?? "")
+          : state.featuredRecipeId;
 
       // also remove from liked
       const nextLiked = new Set(state.likedIds);
@@ -45,8 +49,16 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
     case "SET_FEATURED":
       return { ...state, featuredRecipeId: action.recipeId };
 
+    case "ADD_SEARCH_HISTORY":
+      return {
+        ...state,
+        searchHistory: [action.item, ...state.searchHistory],
+      };
+
+    case "CLEAR_SEARCH_HISTORY":
+      return { ...state, searchHistory: [] };
+
     default: {
-      const _exhaustive: never = action;
       return state;
     }
   }

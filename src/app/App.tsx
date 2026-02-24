@@ -2,7 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AppLayout } from "../layout";
 import {
   ExplorePage,
-  DailyPage,
+  SmartRecipePage,
   ProfilePage,
   RecipeDetailsPage,
   LoginPage,
@@ -26,7 +26,7 @@ export const App = () => {
       <Routes>
         <Route path="/" element={<Navigate to={isAuthenticated() ? "/profile" : "/login"} replace />} />
         <Route path="/explore" element={<RequireAuth><ExplorePage /></RequireAuth>} />
-        <Route path="/daily" element={<RequireAuth><DailyPage /></RequireAuth>} />
+        <Route path="/smart-recipe" element={<RequireAuth><SmartRecipePage /></RequireAuth>} />
         <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
         <Route path="/recipe/:id" element={<RequireAuth><RecipeDetailsPage /></RequireAuth>} />
         <Route path="/login" element={<RedirectIfAuth><LoginPage /></RedirectIfAuth>} />

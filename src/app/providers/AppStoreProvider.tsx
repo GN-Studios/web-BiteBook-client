@@ -9,9 +9,14 @@ const initialState: AppState = {
   likedIds: new Set<string>(),
   myRecipeIds: new Set<string>(),
   featuredRecipeId: "",
+  searchHistory: [],
 };
 
-export const AppStoreProvider = ({ children }: { children: React.ReactNode }) => {
+export const AppStoreProvider = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
   useEffect(() => {
@@ -21,7 +26,13 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
       try {
         const recipes = await getRecipes();
         if (!mounted) return;
-        recipes.forEach((recipe) => dispatch({ type: "ADD_RECIPE", recipe: recipe, addToMyRecipes: false }));
+        recipes.forEach((recipe) =>
+          dispatch({
+            type: "ADD_RECIPE",
+            recipe: recipe,
+            addToMyRecipes: false,
+          }),
+        );
       } catch (err) {
         console.error("Failed to load recipes from API:", err);
       }
@@ -34,5 +45,9 @@ export const AppStoreProvider = ({ children }: { children: React.ReactNode }) =>
 
   const value = useMemo(() => ({ state, dispatch }), [state]);
 
-  return <AppStoreContext.Provider value={value}>{children}</AppStoreContext.Provider>;
+  return (
+    <AppStoreContext.Provider value={value}>
+      {children}
+    </AppStoreContext.Provider>
+  );
 };
