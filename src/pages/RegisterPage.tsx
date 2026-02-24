@@ -1,5 +1,14 @@
 import React, { useRef, useState } from "react";
-import { Avatar, Box, Button, IconButton, Paper, Stack, TextField, Typography } from "@mui/material";
+import {
+  Avatar,
+  Box,
+  Button,
+  IconButton,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import { createFakeToken, setToken } from "../app/auth";
 import { useNavigate } from "react-router-dom";
@@ -29,15 +38,23 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+    <Box
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      height="100%"
+    >
       <Paper sx={{ p: 4, width: 360 }}>
         <Typography variant="h6" gutterBottom>
           Create account
         </Typography>
         <Box component="form" onSubmit={handleSubmit}>
           <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
-            <Avatar src={avatar ?? undefined} sx={{ width: 56, height: 56, bgcolor: "primary.main" }}>
-              {name ? name[0] : "U"}
+            <Avatar
+              src={avatar ?? undefined}
+              sx={{ width: 56, height: 56, bgcolor: "primary.main" }}
+            >
+              {username ? username[0] : "U"}
             </Avatar>
             <IconButton
               aria-label="upload picture"
@@ -78,10 +95,21 @@ export const RegisterPage: React.FC = () => {
             margin="normal"
             type="password"
           />
-          <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 2 }}>
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            fullWidth
+            sx={{ mt: 2 }}
+          >
             Register
           </Button>
-          <Button onClick={() => navigate("/login")} color="inherit" fullWidth sx={{ mt: 1 }}>
+          <Button
+            onClick={() => navigate("/login")}
+            color="inherit"
+            fullWidth
+            sx={{ mt: 1 }}
+          >
             Already have an account?
           </Button>
         </Box>

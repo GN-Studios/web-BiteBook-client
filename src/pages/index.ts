@@ -1,4 +1,4 @@
-export { DailyPage } from "./DailyPage";
+export { SmartRecipePage } from "./SmartRecipePage";
 export { ExplorePage } from "./ExplorePage";
 export { ProfilePage } from "./ProfilePage";
 export { RecipeDetailsPage } from "./RecipeDetailsPage";

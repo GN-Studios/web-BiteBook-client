@@ -9,6 +9,7 @@ const initialState: AppState = {
   likedIds: new Set<string>(),
   myRecipeIds: new Set<string>(["margherita", "quinoa-bowl"]),
   featuredRecipeId: "lava-cake",
+  searchHistory: [],
 };
 
 export const AppStoreProvider = ({ children }: { children: React.ReactNode }) => {
