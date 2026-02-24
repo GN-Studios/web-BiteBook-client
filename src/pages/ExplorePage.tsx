@@ -3,6 +3,7 @@ import { AddRounded } from "@mui/icons-material";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { RecipeCard, CreateRecipeDialog } from "../components";
+import { createRecipe } from "../api";
 import { useAppStore } from "../app/providers";
 import type { Recipe } from "../types";
 
@@ -13,8 +14,13 @@ export const ExplorePage = () => {
 
   const recipes = useMemo(() => state.recipes, [state.recipes]);
 
-  const onCreate = (recipe: Recipe) => {
-    dispatch({ type: "ADD_RECIPE", recipe, addToMyRecipes: true });
+  const onRecipeCreate = async (recipe: Recipe) => {
+    try {
+      const created = await createRecipe(recipe);
+      dispatch({ type: "ADD_RECIPE", recipe: created, addToMyRecipes: true });
+    } catch (err) {
+      console.error("Failed to create recipe:", err);
+    }
   };
 
   return (
@@ -52,7 +58,7 @@ export const ExplorePage = () => {
       >
         <AddRounded />
       </Fab>
-      <CreateRecipeDialog open={openCreate} onClose={() => setOpenCreate(false)} onCreate={onCreate} mode="create" />
+      <CreateRecipeDialog open={openCreate} onClose={() => setOpenCreate(false)} onCreate={onRecipeCreate} mode="create" />
     </Box>
   );
 };

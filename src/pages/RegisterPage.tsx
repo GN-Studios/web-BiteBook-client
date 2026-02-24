@@ -1,7 +1,8 @@
 import React, { useRef, useState } from "react";
-import { Avatar, Box, Button, IconButton, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Avatar, Box, Button, IconButton, Paper, Stack, TextField, Typography, Snackbar, Alert } from "@mui/material";
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
-import { createFakeToken, setToken } from "../app/auth";
+import { setToken, setUser, createFakeToken } from "../app/auth";
+import { register as apiRegister } from "../api";
 import { useNavigate } from "react-router-dom";
 
 export const RegisterPage: React.FC = () => {
@@ -11,14 +12,34 @@ export const RegisterPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [avatar, setAvatar] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [openError, setOpenError] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Register", { username, email, password, avatar });
-    const user = { name: username, email, avatar };
-    const token = createFakeToken(user);
-    setToken(token);
-    navigate("/profile");
+    (async () => {
+      try {
+        const res = await apiRegister({ name: username, email, password, image: avatar ?? undefined });
+        setToken(res.token);
+        setUser(res.user);
+        navigate("/explorer");
+      } catch (err: any) {
+        const msg = err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message ?? "Registration failed";
+        setError(String(msg));
+        setOpenError(true);
+        return;
+      }
+    })();
+  };
+
+  const handleCloseError = () => {
+    setOpenError(false);
+    setError(null);
+    // clear inputs when alert closes
+    setUsername("");
+    setEmail("");
+    setPassword("");
+    setAvatar(null);
   };
 
   const handleFile = (file?: File) => {
@@ -37,7 +58,7 @@ export const RegisterPage: React.FC = () => {
         <Box component="form" onSubmit={handleSubmit}>
           <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
             <Avatar src={avatar ?? undefined} sx={{ width: 56, height: 56, bgcolor: "primary.main" }}>
-              {name ? name[0] : "U"}
+              {username ? username[0] : "U"}
             </Avatar>
             <IconButton
               aria-label="upload picture"
@@ -85,6 +106,11 @@ export const RegisterPage: React.FC = () => {
             Already have an account?
           </Button>
         </Box>
+        <Snackbar open={openError} autoHideDuration={6000} onClose={handleCloseError}>
+          <Alert onClose={handleCloseError} severity="error" sx={{ width: "100%" }}>
+            {error}
+          </Alert>
+        </Snackbar>
       </Paper>
     </Box>
   );

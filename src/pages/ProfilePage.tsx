@@ -1,15 +1,10 @@
 import { Avatar, Box, Button, IconButton, Paper, Stack, Tab, Tabs, TextField, Typography } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import SaveIcon from "@mui/icons-material/Save";
-import CloseIcon from "@mui/icons-material/Close";
-import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
-import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import { Edit, Save, Close, LogoutRounded, PhotoCamera, DeleteOutline } from "@mui/icons-material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFakeToken, getUserFromToken, setToken, clearToken } from "../app/auth";
 import { useNavigate } from "react-router-dom";
-
 import { useAppStore } from "../app/providers";
+import { deleteRecipe, updateRecipe, getUserRecipes } from "../api";
 import { RecipeCard, EmptyState, CreateRecipeDialog } from "../components";
 import type { Recipe } from "../types";
 
@@ -87,8 +82,44 @@ export const ProfilePage = () => {
     setEditing(null);
   };
 
-  const deleteRecipe = (id: string) => {
-    dispatch({ type: "DELETE_RECIPE", recipeId: id });
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      try {
+        const userRecipes = await getUserRecipes(user?.name ?? "");
+        if (!mounted) return;
+        userRecipes.forEach((r) => {
+          if (!state.myRecipeIds.has(r.id)) {
+            dispatch({ type: "ADD_RECIPE", recipe: r, addToMyRecipes: true });
+          }
+        });
+      } catch (err) {
+        console.warn("Failed to load user recipes:", err);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const onRecipeDelete = async (id: string) => {
+    try {
+      await deleteRecipe(id);
+      dispatch({ type: "DELETE_RECIPE", recipeId: id });
+    } catch (err) {
+      console.error("Failed to delete recipe:", err);
+    }
+  };
+
+  const onRecipeUpdate = async (recipe: Recipe) => {
+    try {
+      const res = await updateRecipe(recipe.id, recipe);
+      dispatch({ type: "UPDATE_RECIPE", recipe: res });
+    } catch (err) {
+      console.error("Failed to update recipe:", err);
+    }
   };
 
   return (
@@ -110,11 +141,11 @@ export const ProfilePage = () => {
               onChange={(e) => handleFile(e.target.files?.[0])}
             />
             <IconButton onClick={() => fileRef.current?.click()}>
-              <PhotoCameraIcon />
+              <PhotoCamera />
             </IconButton>
             {user?.avatar && (
               <IconButton onClick={removeAvatar} aria-label="remove avatar">
-                <DeleteOutlineIcon />
+                <DeleteOutline />
               </IconButton>
             )}
           </Stack>
@@ -127,16 +158,11 @@ export const ProfilePage = () => {
                   onChange={(e) => setUsernameInput(e.target.value)}
                   autoFocus
                 />
-                <IconButton
-                  size="small"
-                  onClick={handleSaveUsername}
-                  color="primary"
-                  aria-label="save username"
-                >
-                  <SaveIcon />
+                <IconButton size="small" onClick={handleSaveUsername} color="primary" aria-label="save username">
+                  <Save />
                 </IconButton>
                 <IconButton size="small" onClick={handleCancelEdit} aria-label="cancel edit">
-                  <CloseIcon />
+                  <Close />
                 </IconButton>
               </Stack>
             ) : (
@@ -144,12 +170,8 @@ export const ProfilePage = () => {
                 <Typography variant="h6" sx={{ fontWeight: 900 }}>
                   {user?.name ?? "שקד גורן"}
                 </Typography>
-                <IconButton
-                  size="small"
-                  onClick={() => setEditingUsername(true)}
-                  aria-label="edit username"
-                >
-                  <EditIcon />
+                <IconButton size="small" onClick={() => setEditingUsername(true)} aria-label="edit username">
+                  <Edit />
                 </IconButton>
               </Stack>
             )}
@@ -158,10 +180,9 @@ export const ProfilePage = () => {
             </Typography>
           </Box>
         </Stack>
-
         <Button
           variant="outlined"
-          startIcon={<LogoutRoundedIcon />}
+          startIcon={<LogoutRounded />}
           sx={{ borderRadius: 999 }}
           onClick={() => {
             clearToken();
@@ -171,7 +192,6 @@ export const ProfilePage = () => {
           Sign Out
         </Button>
       </Stack>
-
       <Paper
         elevation={0}
         sx={{
@@ -201,14 +221,14 @@ export const ProfilePage = () => {
                   onOpen={() => navigate(`/recipe/${recipe.id}`)}
                   showOwnerActions
                   onEdit={() => openEdit(recipe)}
-                  onDelete={() => deleteRecipe(recipe.id)}
+                  onDelete={() => onRecipeDelete(recipe.id)}
                 />
                 <CreateRecipeDialog
                   open={editOpen}
                   mode="edit"
                   initialRecipe={editing ?? undefined}
                   onClose={closeEdit}
-                  onUpdate={(updated) => dispatch({ type: "UPDATE_RECIPE", recipe: updated })}
+                  onUpdate={(updated) => onRecipeUpdate(updated)}
                 />
               </Box>
             );

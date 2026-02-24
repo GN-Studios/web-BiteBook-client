@@ -1,1 +1,1 @@
-export type * from "./recipe";
+export * from "./recipe";
